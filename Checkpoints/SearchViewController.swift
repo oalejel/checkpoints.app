@@ -19,10 +19,11 @@ class SearchViewController: UIViewController,
     UITableViewDataSource,
     UITableViewDelegate,
     UISearchBarDelegate,
-    DetailHeaderViewDelegate {
+    DetailHeaderViewDelegate,
+UISearchResultsUpdating {
     
     var searchResults = [CLLocation]()
-
+    let searchController = UISearchController(searchResultsController: nil)
     weak var delegate: SearchViewControllerDelegate?
 
     private(set) lazy var header = Bundle.main.loadNibNamed("DetailHeaderView", owner: self, options: nil)![0] as! DetailHeaderView
@@ -44,7 +45,8 @@ class SearchViewController: UIViewController,
     override func loadView() {
         view = UIView()
         setUpView()
-        title = "Search"
+        title = "Search" // remove unless we need this or a full-screen view controller
+        
     }
 
     // MARK: - UITableViewDataSource
@@ -64,6 +66,13 @@ class SearchViewController: UIViewController,
         tableView.deselectRow(at: indexPath, animated: true)
         delegate?.searchViewControllerDidSelectARow(self)
     }
+    
+    // MARK: - Search Updating
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        
+    }
+
     
     // MARK: - SearchBarDelegate
     

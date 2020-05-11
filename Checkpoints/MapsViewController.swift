@@ -10,16 +10,21 @@ import MapKit
 import UIKit
 import CoreLocation
 
-class MapsViewController: UIViewController, CLLocationManagerDelegate {
+class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     
     private var clManager = CLLocationManager()
     let mapView = MKMapView()
+    var overlayContainerDelegate: OverlayContainerDelegate?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         view.addSubview(mapView)
         mapView.pinToSuperview()
+        mapView.showsTraffic = true
+        mapView.showsUserLocation = true
+        mapView.userTrackingMode = .follow
+        mapView.delegate = self
         
         clManager.delegate = self
         clManager.requestAlwaysAuthorization() // warning: move to a later part of the app (when go pressed)
@@ -30,6 +35,13 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate {
     
     func requestLocationPermissions() { // call when user first presses go?
         clManager.requestAlwaysAuthorization()
+    }
+    
+    // MARK: - Mapview Delegate
+    
+    func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+        // tell overlay to scroll down when mak is being scrolled
+        overlayContainerDelegate?.minimizeOverlay()
     }
     
     // MARK: - CLLocationManagerDelegate
@@ -53,6 +65,10 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate {
     }
     
     func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
+        
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         
     }
     

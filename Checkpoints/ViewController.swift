@@ -15,7 +15,11 @@ class BackdropViewController: UIViewController {
     }
 }
 
-class ViewController: UIViewController {
+protocol OverlayContainerDelegate {
+    func minimizeOverlay()
+}
+
+class ViewController: UIViewController, OverlayContainerDelegate {
 
     enum OverlayNotch: Int, CaseIterable {
         case minimum, medium, maximum
@@ -24,11 +28,13 @@ class ViewController: UIViewController {
     private let backdropViewController = BackdropViewController()
     private let searchViewController = SearchViewController(showsCloseAction: false)
     private let mapsViewController = MapsViewController()
+    let overlayController = OverlayContainerViewController(style: .expandableHeight)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let overlayController = OverlayContainerViewController(style: .expandableHeight)
+        
         overlayController.delegate = self
+        mapsViewController.overlayContainerDelegate = self
         overlayController.viewControllers = [
             mapsViewController,
             backdropViewController,
@@ -85,5 +91,11 @@ extension ViewController: OverlayContainerViewControllerDelegate {
         transitionCoordinator.animate(alongsideTransition: { [weak self] context in
             self?.backdropViewController.view.alpha = context.translationProgress()
         }, completion: nil)
+    }
+    
+    // MARK: - OverlayContainerDelegate
+    
+    func minimizeOverlay() {
+        overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
     }
 }

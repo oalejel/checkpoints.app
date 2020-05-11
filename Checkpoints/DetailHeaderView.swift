@@ -16,10 +16,10 @@ class DetailHeaderView: UIView {
     
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var peopleButton: UIButton!
-    @IBOutlet weak var searchBar: UISearchBar!
+//    @IBOutlet weak var searchBar: UISearchBar!
     
     weak var delegate: DetailHeaderViewDelegate?
-    weak var searchBarDelegate: UISearchBarDelegate?
+//    weak var searchBarDelegate: UISearchBarDelegate?
 
     override func willMove(toSuperview newSuperview: UIView?) {
         peopleButton.backgroundColor = UIColor(white: 0.9, alpha: 1)
