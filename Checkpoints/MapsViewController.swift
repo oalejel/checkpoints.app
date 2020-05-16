@@ -10,11 +10,19 @@ import MapKit
 import UIKit
 import CoreLocation
 
+protocol LocationsDelegate {
+    func updatedSearchResults(mapItems: [MKMapItem])
+    
+}
+
 class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     
     private var clManager = CLLocationManager()
     let mapView = MKMapView()
     var overlayContainerDelegate: OverlayContainerDelegate?
+    
+    var searchResults = [MKMapItem]()
+    var delegate: LocationsDelegate?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,13 +36,28 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         
         clManager.delegate = self
         clManager.requestAlwaysAuthorization() // warning: move to a later part of the app (when go pressed)
-
     }
     
     // MARK: - "Public" functions for use by other classes
     
     func requestLocationPermissions() { // call when user first presses go?
         clManager.requestAlwaysAuthorization()
+    }
+    
+    func search(string: String) {
+        if (string.count == 0) { return }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = string
+        request.region = mapView.region
+        let search = MKLocalSearch(request: request)
+        search.start { response, _ in
+            guard let response = response else {
+                return
+            }
+            self.searchResults = response.mapItems
+            self.delegate?.updatedSearchResults(mapItems: self.searchResults) // notify delegate of new data
+        }
+
     }
     
     // MARK: - Mapview Delegate

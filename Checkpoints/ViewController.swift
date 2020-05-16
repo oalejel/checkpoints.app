@@ -5,8 +5,10 @@
 //  Created by Omar Al-Ejel on 4/23/20.
 //  Copyright © 2020 Omar Al-Ejel. All rights reserved.
 //
+
 import OverlayContainer
 import UIKit
+import MapKit
 
 class BackdropViewController: UIViewController {
     override func loadView() {
@@ -17,41 +19,92 @@ class BackdropViewController: UIViewController {
 
 protocol OverlayContainerDelegate {
     func minimizeOverlay()
+    func expandOverlay()
 }
 
-class ViewController: UIViewController, OverlayContainerDelegate {
+enum UserState {
+    case Searching, AddingCheckpoint
+}
 
+class ViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
+
+    
+    let overlayController = OverlayContainerViewController(style: .expandableHeight)
+    private let overlayNavigationController = OverlayNavigationViewController()
+    
+    private let backdropViewController = BackdropViewController()
+    private let searchViewController = SearchViewController(showsCloseAction: false)
+    private let mapsViewController = MapsViewController()
+    
+    var state: UserState = .Searching
+    
     enum OverlayNotch: Int, CaseIterable {
         case minimum, medium, maximum
     }
 
-    private let backdropViewController = BackdropViewController()
-    private let searchViewController = SearchViewController(showsCloseAction: false)
-    private let mapsViewController = MapsViewController()
-    let overlayController = OverlayContainerViewController(style: .expandableHeight)
-
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        
+        // might not be the cleanest approach, but this makes it easier to divide extensions
         overlayController.delegate = self
+        searchViewController.delegate = self
+        mapsViewController.delegate = self
         mapsViewController.overlayContainerDelegate = self
+        searchViewController.overlayContainerDelegate = self
+        overlayNavigationController.delegate = self
         overlayController.viewControllers = [
             mapsViewController,
             backdropViewController,
-            searchViewController
+            overlayNavigationController
         ]
+        overlayNavigationController.push(searchViewController, animated: true)
         addChild(overlayController, in: view)
     }
 
     private func notchHeight(for notch: OverlayNotch, availableSpace: CGFloat) -> CGFloat {
         switch notch {
         case .maximum:
-            return availableSpace * 3 / 4
+            return availableSpace * 5 / 6
         case .medium:
-            return availableSpace / 2
+            return availableSpace / 1.5
         case .minimum:
-            return availableSpace * 1 / 4
+            return availableSpace * 2 / 7
         }
+    }
+}
+
+extension ViewController: OverlayNavigationViewControllerDelegate {
+    func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
+        if state == .AddingCheckpoint {
+            if let cvc = viewController as? CheckpointViewController {
+                overlayController.drivingScrollView = cvc.scrollView
+            }
+        }
+    }
+}
+
+
+extension ViewController: SearchViewControllerDelegate {
+    
+    func searchViewControllerDidSelectARow(_ searchViewController: SearchViewController) {
+        let cvc = CheckpointViewController(nibName: nil, bundle: nil)
+        state = .AddingCheckpoint
+        overlayNavigationController.push(cvc, animated: true)
+    }
+    
+    func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
+        
+    }
+
+    func searchViewControllerDidSearchString(_ string: String) {
+        mapsViewController.search(string: string)
+    }
+}
+
+extension ViewController: LocationsDelegate {
+    func updatedSearchResults(mapItems: [MKMapItem]) {
+        searchViewController.refreshSearchResults(mapItems)
     }
 }
 
@@ -72,17 +125,34 @@ extension ViewController: OverlayContainerViewControllerDelegate {
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
                                         scrollViewDrivingOverlay overlayViewController: UIViewController) -> UIScrollView? {
-        return (overlayViewController as? SearchViewController)?.tableView
+        if state == .Searching {
+            return searchViewController.tableView
+        } else if state == .AddingCheckpoint {
+            if let scrollView = (navigationController?.topViewController as? OldCheckpointViewController)?.scrollView {
+                return scrollView
+            }
+        }
+        
+        fatalError("should match a scrollview")
     }
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
                                         shouldStartDraggingOverlay overlayViewController: UIViewController,
                                         at point: CGPoint,
                                         in coordinateSpace: UICoordinateSpace) -> Bool {
-        guard let header = (overlayViewController as? SearchViewController)?.header else {
-            return false
+        switch state {
+        case .Searching:
+            let header = searchViewController.header
+            let hitHeader = header.bounds.contains(coordinateSpace.convert(point, to: header))
+            searchViewController.header.searchBar.resignFirstResponder()
+            return hitHeader
+        case .AddingCheckpoint:
+//            let vc = overlayNavigationController.topViewController!
+//            let convertedPoint = coordinateSpace.convert(point, to: vc.view)
+//            let yes = vc.view.bounds.contains(convertedPoint)
+//            return yes
+            return true
         }
-        return header.bounds.contains(coordinateSpace.convert(point, to: header))
     }
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
@@ -90,12 +160,24 @@ extension ViewController: OverlayContainerViewControllerDelegate {
                                         transitionCoordinator: OverlayContainerTransitionCoordinator) {
         transitionCoordinator.animate(alongsideTransition: { [weak self] context in
             self?.backdropViewController.view.alpha = context.translationProgress()
+            
+            // if we moved down far enough, hide keyboard
+            // warning: not doing its job, since something is strictly resigning keyboard control
+            if context.targetTranslationHeight < context.maximumReachableHeight() {
+                self?.searchViewController.endEditing()
+            }
         }, completion: nil)
     }
     
     // MARK: - OverlayContainerDelegate
     
     func minimizeOverlay() {
+        searchViewController.endEditing()
         overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
     }
+    
+    func expandOverlay() {
+        overlayController.moveOverlay(toNotchAt: OverlayNotch.maximum.rawValue, animated: true)
+    }
+
 }
