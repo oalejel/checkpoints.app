@@ -11,7 +11,7 @@ import MapKit
 import CoreLocation
 
 protocol SearchViewControllerDelegate: AnyObject {
-    func searchViewControllerDidSelectARow(_ searchViewController: SearchViewController)
+    func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController)
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController)
     func searchViewControllerDidSearchString(_ string: String)
 }
@@ -23,7 +23,7 @@ class SearchViewController: UIViewController,
     DetailHeaderViewDelegate {
     
     var searchResults = [MKMapItem]()
-    let searchController = UISearchController(searchResultsController: nil)
+    var selectedMapItem: MKMapItem?
     weak var delegate: SearchViewControllerDelegate?
     var overlayContainerDelegate: OverlayContainerDelegate?
 
@@ -48,6 +48,7 @@ class SearchViewController: UIViewController,
         setUpView()
         title = "Search" // remove unless we need this or a full-screen view controller
         header.searchBar.delegate = self
+        header.checkpointCountButton.isHidden = true // hide count when we havent added anything
     }
     
     func endEditing() {
@@ -95,7 +96,8 @@ class SearchViewController: UIViewController,
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        delegate?.searchViewControllerDidSelectARow(self)
+        selectedMapItem = searchResults[indexPath.row]
+        delegate?.searchViewControllerDidSelectRow(self)
     }
     
     // MARK: - Custom Search Bar Behavior

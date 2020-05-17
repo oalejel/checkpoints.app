@@ -18,6 +18,7 @@ class DetailHeaderView: UIView {
     @IBOutlet weak var peopleButton: UIButton!
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var vstack: UIStackView!
+    @IBOutlet weak var checkpointCountButton: UIButton!
     
     enum State {
         case Search, LocationPreview

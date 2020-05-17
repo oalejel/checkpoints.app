@@ -9,20 +9,25 @@
 import UIKit
 import MapKit
 
+protocol CheckpointViewControllerDelegate {
+    func addCheckpointToPath(mapItem: MKMapItem)
+}
+
 class CheckpointViewController: UIViewController {
     
     var scrollView = UIScrollView()
-
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var addressLabel: UILabel!
     @IBOutlet weak var closeButton: UIButton!
-    
     @IBOutlet weak var addButton: UIButton!
     @IBOutlet weak var mapFocusButton: UIButton!
     
+    var mapItem: MKMapItem
+    var delegate: CheckpointViewControllerDelegate?
+    
     init(mapItem: MKMapItem) {
+        self.mapItem = mapItem
         super.init(nibName: nil, bundle: nil)
-        nameLabel.text = mapItem.name ?? mapItem.placemark.
     }
     
     required init?(coder: NSCoder) {
@@ -42,9 +47,20 @@ class CheckpointViewController: UIViewController {
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true
+        
+        nameLabel.text = mapItem.name ?? mapItem.placemark.title ?? "other name"
+
     }
 
-
+    @IBAction func closePressed(_ sender: UIButton) {
+//        dismiss(animated: true, completion: nil)
+        navigationController?.popViewController(animated: true)
+    }
+    
+    @IBAction func addCheckpointPressed(_ sender: UIButton) {
+        delegate?.addCheckpointToPath(mapItem: mapItem)
+    }
+    
     /*
     // MARK: - Navigation
 

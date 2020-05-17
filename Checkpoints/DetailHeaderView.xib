@@ -3,7 +3,7 @@
     <device id="retina4_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16086"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16087"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -18,16 +18,16 @@
                     <rect key="frame" x="0.0" y="16" width="375" height="98"/>
                     <subviews>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="center" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="SDS-ke-xNi">
-                            <rect key="frame" x="16" y="0.0" width="343" height="37.5"/>
+                            <rect key="frame" x="16" y="0.0" width="343" height="35"/>
                             <subviews>
                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Checkpoints" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jAt-jh-rsL">
-                                    <rect key="frame" x="0.0" y="2" width="169" height="33.5"/>
+                                    <rect key="frame" x="0.0" y="1" width="169" height="33.5"/>
                                     <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="28"/>
                                     <nil key="textColor"/>
                                     <nil key="highlightedColor"/>
                                 </label>
                                 <button opaque="NO" contentMode="scaleAspectFit" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fBD-dg-YPW">
-                                    <rect key="frame" x="308" y="1.5" width="35" height="35"/>
+                                    <rect key="frame" x="308" y="0.0" width="35" height="35"/>
                                     <constraints>
                                         <constraint firstAttribute="height" constant="35" id="DYI-0B-nRw"/>
                                         <constraint firstAttribute="width" constant="35" id="O23-va-C1J"/>
@@ -39,12 +39,17 @@
                                 </button>
                             </subviews>
                         </stackView>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mXo-Di-NWX">
+                            <rect key="frame" x="16" y="35" width="343" height="24.5"/>
+                            <state key="normal" title="0 checkpoints added"/>
+                        </button>
                         <searchBar userInteractionEnabled="NO" contentMode="redraw" searchBarStyle="minimal" placeholder="Search address, name, or coordinates" translatesAutoresizingMaskIntoConstraints="NO" id="cm4-he-xbO">
-                            <rect key="frame" x="8" y="37.5" width="359" height="60.5"/>
+                            <rect key="frame" x="8" y="59.5" width="359" height="38.5"/>
                             <textInputTraits key="textInputTraits"/>
                         </searchBar>
                     </subviews>
                     <constraints>
+                        <constraint firstItem="mXo-Di-NWX" firstAttribute="leading" secondItem="jAt-jh-rsL" secondAttribute="leading" id="UXO-L5-Iof"/>
                         <constraint firstItem="SDS-ke-xNi" firstAttribute="leading" secondItem="cus-ys-xUL" secondAttribute="leading" constant="16" id="feE-OH-UHt"/>
                         <constraint firstAttribute="trailing" secondItem="cm4-he-xbO" secondAttribute="trailing" constant="8" id="g0L-sS-eHO"/>
                         <constraint firstAttribute="trailing" secondItem="SDS-ke-xNi" secondAttribute="trailing" constant="16" id="jMV-Rh-7Qb"/>
@@ -62,6 +67,7 @@
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <connections>
+                <outlet property="checkpointCountButton" destination="mXo-Di-NWX" id="m2r-35-GuR"/>
                 <outlet property="peopleButton" destination="fBD-dg-YPW" id="85j-76-yjD"/>
                 <outlet property="searchBar" destination="cm4-he-xbO" id="26O-gJ-q5O"/>
                 <outlet property="titleLabel" destination="jAt-jh-rsL" id="MLW-YW-Q8o"/>

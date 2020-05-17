@@ -17,7 +17,7 @@ protocol LocationsDelegate {
 
 class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     
-    private var clManager = CLLocationManager()
+//    private var clManager = CLLocationManager()
     let mapView = MKMapView()
     var overlayContainerDelegate: OverlayContainerDelegate?
     
@@ -34,14 +34,14 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         mapView.userTrackingMode = .follow
         mapView.delegate = self
         
-        clManager.delegate = self
-        clManager.requestAlwaysAuthorization() // warning: move to a later part of the app (when go pressed)
+        PathFinder.shared.locationManager.delegate = self
+        PathFinder.shared.locationManager.requestAlwaysAuthorization() // warning: move to a later part of the app (when go pressed)
     }
     
     // MARK: - "Public" functions for use by other classes
     
     func requestLocationPermissions() { // call when user first presses go?
-        clManager.requestAlwaysAuthorization()
+        PathFinder.shared.locationManager.requestAlwaysAuthorization()
     }
     
     func search(string: String) {
@@ -71,7 +71,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         if status == .authorizedAlways || status == .authorizedWhenInUse {
-            clManager.requestLocation() // no need for live location tracking for now. Just ask for zoom in.
+            PathFinder.shared.locationManager.requestLocation() // no need for live location tracking for now. Just ask for zoom in.
         }
     }
     

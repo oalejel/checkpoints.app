@@ -27,7 +27,6 @@ enum UserState {
 }
 
 class ViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
-
     
     let overlayController = OverlayContainerViewController(style: .expandableHeight)
     private let overlayNavigationController = OverlayNavigationViewController()
@@ -44,7 +43,6 @@ class ViewController: UINavigationController, OverlayContainerDelegate, UIViewCo
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
         
         // might not be the cleanest approach, but this makes it easier to divide extensions
         overlayController.delegate = self
@@ -76,7 +74,10 @@ class ViewController: UINavigationController, OverlayContainerDelegate, UIViewCo
 
 extension ViewController: OverlayNavigationViewControllerDelegate {
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
-        if state == .AddingCheckpoint {
+        
+        if state == .Searching {
+            
+        } else if state == .AddingCheckpoint {
             if let cvc = viewController as? CheckpointViewController {
                 overlayController.drivingScrollView = cvc.scrollView
             }
@@ -87,8 +88,9 @@ extension ViewController: OverlayNavigationViewControllerDelegate {
 
 extension ViewController: SearchViewControllerDelegate {
     
-    func searchViewControllerDidSelectARow(_ searchViewController: SearchViewController) {
-        let cvc = CheckpointViewController(nibName: nil, bundle: nil)
+    func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
+        let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!)
+        cvc.delegate = self
         state = .AddingCheckpoint
         overlayNavigationController.push(cvc, animated: true)
     }
@@ -100,6 +102,14 @@ extension ViewController: SearchViewControllerDelegate {
     func searchViewControllerDidSearchString(_ string: String) {
         mapsViewController.search(string: string)
     }
+}
+
+extension ViewController: CheckpointViewControllerDelegate {
+    
+    func addCheckpointToPath(mapItem: MKMapItem) {
+        PathFinder.shared.addDestination(mapItem: mapItem)
+    }
+    
 }
 
 extension ViewController: LocationsDelegate {
@@ -128,9 +138,10 @@ extension ViewController: OverlayContainerViewControllerDelegate {
         if state == .Searching {
             return searchViewController.tableView
         } else if state == .AddingCheckpoint {
-            if let scrollView = (navigationController?.topViewController as? OldCheckpointViewController)?.scrollView {
-                return scrollView
-            }
+//            if let scrollView = (navigationController?.topViewController as? CheckpointViewController)?.scrollView {
+//                return scrollView
+//            }
+            return nil
         }
         
         fatalError("should match a scrollview")
