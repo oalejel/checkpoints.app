@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  MainViewController.swift
 //  Checkpoints
 //
 //  Created by Omar Al-Ejel on 4/23/20.
@@ -26,7 +26,7 @@ enum UserState {
     case Searching, AddingCheckpoint
 }
 
-class ViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
+class MainViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
     
     let overlayController = OverlayContainerViewController(style: .expandableHeight)
     private let overlayNavigationController = OverlayNavigationViewController()
@@ -72,27 +72,28 @@ class ViewController: UINavigationController, OverlayContainerDelegate, UIViewCo
     }
 }
 
-extension ViewController: OverlayNavigationViewControllerDelegate {
+extension MainViewController: OverlayNavigationViewControllerDelegate {
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
         
         if state == .Searching {
             
         } else if state == .AddingCheckpoint {
             if let cvc = viewController as? CheckpointViewController {
-                overlayController.drivingScrollView = cvc.scrollView
+                
             }
         }
     }
 }
 
-
-extension ViewController: SearchViewControllerDelegate {
+extension MainViewController: SearchViewControllerDelegate {
     
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
         let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!)
         cvc.delegate = self
         state = .AddingCheckpoint
         overlayNavigationController.push(cvc, animated: true)
+        // temporarily show the pin on the map
+        mapsViewController.showTemporaryPin(mapItem: searchViewController.selectedMapItem!)
     }
     
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
@@ -104,21 +105,33 @@ extension ViewController: SearchViewControllerDelegate {
     }
 }
 
-extension ViewController: CheckpointViewControllerDelegate {
+extension MainViewController: CheckpointViewControllerDelegate {
     
     func addCheckpointToPath(mapItem: MKMapItem) {
         PathFinder.shared.addDestination(mapItem: mapItem)
-    }
+        searchViewController.clearEditing(refreshAddedCheckpoints: true)
     
+        mapsViewController.savePin(for: mapItem, focus: true)
+        overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+        
+        var checkpointsText = "1 checkpoint added"
+        if PathFinder.shared.destinations.count != 1 {
+            checkpointsText = "\(PathFinder.shared.destinations.count) checkpoints added"
+        } else {
+            checkpointsText = "1 checkpoint added"
+        }
+        searchViewController.header.checkpointCountButton.setTitle(checkpointsText, for: .normal)
+        searchViewController.header.checkpointCountButton.isHidden = false
+    }
 }
 
-extension ViewController: LocationsDelegate {
+extension MainViewController: LocationsDelegate {
     func updatedSearchResults(mapItems: [MKMapItem]) {
         searchViewController.refreshSearchResults(mapItems)
     }
 }
 
-extension ViewController: OverlayContainerViewControllerDelegate {
+extension MainViewController: OverlayContainerViewControllerDelegate {
 
     // MARK: - OverlayContainerViewControllerDelegate
 

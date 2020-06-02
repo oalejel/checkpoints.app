@@ -20,27 +20,43 @@ class PathFinder {
     static let shared = PathFinder() // shared singleton
     var locationManager = CLLocationManager()
     
-    private var destinations = [MKMapItem]()
+    private(set) var destinations = [MKMapItem]()
     private var bestPath = [Int]()
     private var bestPathDistance = Double.infinity
-    private var distanceMatrix = [[Double]]()
+    let destinationRequestSemaphore = DispatchSemaphore(value: 1)
     
+    private var distanceMatrix = [[Double]]() // distances in meters
+    /*
+        Distance Matrix storage format
+        []
+        [1-0]
+        [2-0, 2-1]
+        [3-0, 3-1, 3-2]
+        ...
+    */
+    
+    private var permutation = [Int]()
+    
+    struct PrimDatum {
+        var visited = false
+        var parentIndex = -1
+        var minimalWeight = Double.infinity
+    }
+    private var primData = [PrimDatum]()
+    
+    // add destination and precalculate distances with other locations
     func addDestination(mapItem: MKMapItem) {
         destinations.append(mapItem) // may want to compute edge weights to this destination
         
         DispatchQueue.global(qos: .userInitiated).async {
+            // no need to use mutex here, since addDestination is signaled by user interaction
+            self.destinationRequestSemaphore.wait() // block a remove operation
+            
             self.distanceMatrix.append([])
             let rowIndex = self.distanceMatrix.count - 1 // hold on to this in case we get another concurrent call?
             self.distanceMatrix[rowIndex].reserveCapacity(rowIndex)
             
-            /*
-             Distance Matrix storage format
-             []
-             [1-0]
-             [2-0, 2-1]
-             [3-0, 3-1, 3-2]
-             ...
-             */
+           
             
             for colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
                 let request = MKDirections.Request()
@@ -50,7 +66,7 @@ class PathFinder {
                 request.transportType = .automobile
                 let directions = MKDirections(request: request)
                 
-                let etaSemaphore = DispatchSemaphore(value: 1)
+                let etaSemaphore = DispatchSemaphore(value: 0)
                 directions.calculateETA { (etaResponse, error) in
                     guard let etaResponse = etaResponse else {
                         print(error ?? "Unknown error trying to compute ETA")
@@ -63,6 +79,8 @@ class PathFinder {
                 }
                 etaSemaphore.wait() // wait on eta to finish adding distance to matrix
             }
+            print(self.distanceMatrix)
+            self.destinationRequestSemaphore.signal() // allow others to join
             
             // for now, calculate actual travel distance (by car)
             // ignore changes in traffic conditions, for example
@@ -72,17 +90,22 @@ class PathFinder {
     }
     
     func removeDestination(atIndex index: Int) {
+        self.destinationRequestSemaphore.wait()
         destinations.remove(at: index)
         distanceMatrix.remove(at: index)
         for i in (index..<distanceMatrix.count) {
             distanceMatrix[i].remove(at: index) // index..<count rows have relevant entries
         }
+        self.destinationRequestSemaphore.signal()
     }
     
     // warning: may want to add a progress update closure to give updates to the progress of the computation
     func computeIndividualOptimalPath(completion: (([MKMapItem]) -> Void)) {
         assert(destinations.count > 1)
         computePathUpperBound()
+        // WARNING: rotate bestPath so that index 0 has node 0 (start node)
+        permutation = bestPath // start with best one so far to help search time
+        generatePermutations(permLength: 1, growingDistance: 0.0)
     }
     
     // Note: in this case, the start destination must also be the end destination (for now)
@@ -161,11 +184,6 @@ class PathFinder {
             if sliceStartIndexIndex != bestPath.count - 1 { // close off the last slice if we havent split up to count - 2
                 pathSlices.append((sliceStartIndexIndex, bestPath.count - 2)) // careful to account for going back to 0
             }
-            
-            
-            
-            
-            
             
             // step 1: generate path
             // index-index pairs -> subpath index subarray slices -> arrays of mapItem arrays without RTH
@@ -282,9 +300,104 @@ class PathFinder {
     }
     
     private func computePathUpperBound() {
-//        pathUpperBound = destinations
+        // TODO: make this work after proving that generatePermutations works
+        bestPath = Array(0..<destinations.count)
+        bestPathDistance = 0.0
+        for i in 0..<bestPath.count {
+            bestPathDistance += distance(bestPath[i], bestPath[i+1 % bestPath.count])
+        }
     }
     
+    private func generatePermutations(permLength: Int, growingDistance: Double) {
+        if growingDistance > bestPathDistance {
+            return
+        }
+        
+        if permLength == permutation.count {
+            let testDistance = growingDistance + distance(0, permutation.last!)
+            if testDistance < bestPathDistance {
+                bestPath = permutation
+                bestPathDistance = testDistance
+            }
+            return
+        }
+        
+        if !promising(permLength, growingDistance) {
+            return
+        }
+        
+        for i in permLength..<permutation.count {
+            swap(&permutation[permLength], &permutation[i])
+            let nextEdge = distance(permutation[permLength - 1], permutation[permLength])
+            generatePermutations(permLength: permLength + 1, growingDistance: growingDistance + nextEdge)
+            swap(&permutation[permLength], &permutation[i])
+        }
+    }
     
+    // tell whether adding the count - permLength nodes can possibly produce an optimal path
+    private func promising(_ permLength: Int, _ pathDistance: Double) -> Bool {
+        // compute MST on remaining vertices
+        
+        primData.reserveCapacity(permutation.count) // wont ever need more than this amount
+        while primData.count < permutation.count { // most time optimal to keep equal to size of permutation
+            primData.append(PrimDatum())
+        }
+        
+        var numVisited = 1
+        var currentVertex = permLength
+        let mstCount = permutation.count - permLength
+        var mstWeight = 0.0
+        
+        for i in 0..<mstCount { // reset entries we care about
+            primData[i].visited = false
+            primData[i].parentIndex = -1
+            primData[i].minimalWeight = Double.infinity
+        }
+                
+        while numVisited < mstCount {
+            // minimize weights of newly available edges
+            for i in permLength..<mstCount {
+                if primData[i].visited { continue }
+                let dist = distance(permutation[i], permutation[currentVertex])
+                if dist < primData[i].minimalWeight {
+                    primData[i].minimalWeight = dist
+                    primData[i].parentIndex = currentVertex
+                }
+            }
+            
+            // visit next unvisited vertex with lowest edge weight
+            var minUnvisitedWeight = Double.infinity
+            for v in (permLength+1)..<mstCount {
+                if !primData[v].visited {
+                    if primData[v].minimalWeight < minUnvisitedWeight {
+                        currentVertex = v
+                        minUnvisitedWeight = primData[v].minimalWeight
+                    }
+                }
+            }
+            
+            mstWeight += primData[currentVertex].minimalWeight
+            if mstWeight + pathDistance > bestPathDistance {
+                return false // consider early exit
+            }
+            primData[currentVertex].visited = true
+            numVisited += 1
+        }
+        
+        var minLeftEdge = Double.infinity
+        var minRightEdge = Double.infinity
+        for i in permLength..<mstCount {
+            let leftDist = distance(permutation[0], permutation[i])
+            let rightDist = distance(permutation[permLength - 1], permutation[i])
+            if leftDist < minLeftEdge {
+                minLeftEdge = leftDist
+            }
+            if rightDist < minRightEdge {
+                minRightEdge = rightDist
+            }
+        }
+        
+        return minLeftEdge + minRightEdge + mstWeight + pathDistance < bestPathDistance
+    }
     
 }

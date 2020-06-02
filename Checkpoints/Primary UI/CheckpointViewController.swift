@@ -8,6 +8,7 @@
 
 import UIKit
 import MapKit
+import Contacts
 
 protocol CheckpointViewControllerDelegate {
     func addCheckpointToPath(mapItem: MKMapItem)
@@ -21,12 +22,15 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var closeButton: UIButton!
     @IBOutlet weak var addButton: UIButton!
     @IBOutlet weak var mapFocusButton: UIButton!
+    @IBOutlet weak var distanceLabel: UILabel!
     
     var mapItem: MKMapItem
     var delegate: CheckpointViewControllerDelegate?
     
     init(mapItem: MKMapItem) {
         self.mapItem = mapItem
+//        let x = mapItem.placemark
+//        print(x.title, x.locality, x.subLocality, x.country, x.name, x.postalAddress, x.postalCode)
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -41,15 +45,25 @@ class CheckpointViewController: UIViewController {
         view.layer.cornerRadius = 10
         view.layer.masksToBounds = true
 
-        closeButton.backgroundColor = .lightGray
-        closeButton.layer.cornerRadius = 15
-        closeButton.layer.masksToBounds = true
+//        closeButton.backgroundColor = .lightGray
+//        closeButton.layer.cornerRadius = 15
+//        closeButton.layer.masksToBounds = true
+        let dist = Loca
+        
+        distanceLabel.text = "About \() mi from current location"
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true
         
-        nameLabel.text = mapItem.name ?? mapItem.placemark.title ?? "other name"
-
+        nameLabel.text = mapItem.name ?? mapItem.placemark.subLocality ?? mapItem.placemark.locality ?? "Lat: \(mapItem.placemark.coordinate.latitude), Lon: \(mapItem.placemark.coordinate.longitude)"
+        
+        if let postal = mapItem.placemark.postalAddress {
+            let formatter = CNPostalAddressFormatter()
+            addressLabel.text = formatter.string(from: postal)
+        } else {
+            addressLabel.text = "\(mapItem.placemark.coordinate)"
+        }
+        
     }
 
     @IBAction func closePressed(_ sender: UIButton) {
@@ -59,6 +73,7 @@ class CheckpointViewController: UIViewController {
     
     @IBAction func addCheckpointPressed(_ sender: UIButton) {
         delegate?.addCheckpointToPath(mapItem: mapItem)
+        navigationController?.popViewController(animated: true)
     }
     
     /*

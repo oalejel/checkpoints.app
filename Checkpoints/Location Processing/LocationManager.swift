@@ -33,9 +33,16 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
         }
     }
     
+    func calculateDistanceFromCoordinate(coord: CLLocationCoordinate2D) -> Double {
+        if let loc = clManager.location {
+            return loc.distance(from: CLLocation(latitude: coord.latitude, longitude: coord.longitude))
+        }
+        return -1
+    }
+    
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let myLoc = locations.first {
-            
+            print("> location manager updated current location")
         }
     }
     
