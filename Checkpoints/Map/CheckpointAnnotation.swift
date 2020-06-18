@@ -10,4 +10,9 @@ import MapKit
 
 class CheckpointAnnotation: MKPointAnnotation {
     var imageName: String?
+    weak var mapItem: MKMapItem? // need to hold onto map item if we want to 
+    
+    init(mapItem: MKMapItem) {
+        self.mapItem = mapItem
+    }
 }

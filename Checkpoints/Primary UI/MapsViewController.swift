@@ -12,11 +12,15 @@ import CoreLocation
 
 protocol LocationsDelegate {
     func updatedSearchResults(mapItems: [MKMapItem])
+    func shouldPreviewCheckpoint(mapItem: MKMapItem)
+    func shouldEndCheckpointPreview()
+    func manualPinPlaced(for mapItem: MKMapItem) // for long press to drop pin gesture
+    func focusOnMapItem(_ mapItem: MKMapItem)
+    func addCheckpointToPath(mapItem: MKMapItem)
 }
 
 class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     
-//    private var clManager = CLLocationManager()
     let mapView = MKMapView()
     var overlayContainerDelegate: OverlayContainerDelegate?
     
@@ -33,8 +37,30 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         mapView.userTrackingMode = .follow
         mapView.delegate = self
         
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(longPress(gc:)))
+        longPress.minimumPressDuration = 0.6
+        longPress.numberOfTouchesRequired = 1
+        mapView.addGestureRecognizer(longPress)
+        
         PathFinder.shared.locationManager.delegate = self
         PathFinder.shared.locationManager.requestAlwaysAuthorization() // warning: move to a later part of the app (when go pressed)
+    }
+    
+    @objc func longPress(gc: UILongPressGestureRecognizer) {
+        if gc.state == .began {
+            let coordinate = mapView.convert(gc.location(ofTouch: 0, in: mapView), toCoordinateFrom: mapView)
+            PathFinder.shared.computeMapItem(for: coordinate) { (mapItem) in
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                guard let mapItem = mapItem else {
+                    let unkownMapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate, addressDictionary: nil))
+                    self.delegate?.manualPinPlaced(for: unkownMapItem)
+                    return
+                }
+                self.delegate?.manualPinPlaced(for: mapItem)
+            }
+            
+            gc.state = .ended
+        }
     }
     
     // MARK: - "Public" functions for use by other classes
@@ -56,17 +82,26 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
             self.searchResults = response.mapItems
             self.delegate?.updatedSearchResults(mapItems: self.searchResults) // notify delegate of new data
         }
-
     }
     
-    var temporaryAnnotation: CheckpointAnnotation?
-    func showTemporaryPin(mapItem: MKMapItem) {
-        if let tempAnn = temporaryAnnotation {
+    func removePendingAnnotation() {
+        if let tempAnn = pendingAnnotation {
             mapView.removeAnnotation(tempAnn)
+            pendingAnnotation = nil
         }
-        temporaryAnnotation = CheckpointAnnotation()
-        temporaryAnnotation!.coordinate = mapItem.placemark.coordinate
-        mapView.addAnnotation(temporaryAnnotation!)
+    }
+    
+    var pendingAnnotation: CheckpointAnnotation?
+    func showPendingPin(mapItem: MKMapItem) {
+        // deselect last selected pin
+        mapView.deselectAnnotation(calledOutAnnotation, animated: true)
+        calledOutAnnotation = nil
+
+        removePendingAnnotation()
+        pendingAnnotation = CheckpointAnnotation(mapItem: mapItem)
+        pendingAnnotation!.coordinate = mapItem.placemark.coordinate
+        pendingAnnotation?.title = mapItem.placemark.name ?? mapItem.placemark.title ?? "\(mapItem.placemark.coordinate.latitude), \(mapItem.placemark.coordinate.longitude)"
+        mapView.addAnnotation(pendingAnnotation!)
         
         var offsetCoord = mapItem.placemark.coordinate
         if offsetCoord.latitude > 0 {
@@ -79,13 +114,17 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     
     // set `focus` to true to zoom the camera on the newly dropped pin
     func savePin(for mapItem: MKMapItem, focus: Bool) {
+        // deselect last selected pin
+        mapView.deselectAnnotation(calledOutAnnotation, animated: true)
+        calledOutAnnotation = nil
         
         var pointAnnotation: CheckpointAnnotation!
-        if temporaryAnnotation != nil {
-            pointAnnotation = temporaryAnnotation
-            temporaryAnnotation = nil
+        if pendingAnnotation != nil { // if we already have a temporary pin, dont drop it again
+            pointAnnotation = pendingAnnotation
+            pendingAnnotation = nil
         } else {
-            pointAnnotation = CheckpointAnnotation()
+            pointAnnotation = CheckpointAnnotation(mapItem: mapItem)
+            pointAnnotation?.title = mapItem.placemark.name ?? mapItem.placemark.title ?? "\(mapItem.placemark.coordinate.latitude), \(mapItem.placemark.coordinate.longitude)"
             pointAnnotation.coordinate = mapItem.placemark.coordinate
             mapView.addAnnotation(pointAnnotation)
         }
@@ -112,7 +151,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         if status == .authorizedAlways || status == .authorizedWhenInUse {
-            PathFinder.shared.locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            PathFinder.shared.locationManager.desiredAccuracy = kCLLocationAccuracyBest
             PathFinder.shared.locationManager.requestLocation() // no need for live location tracking for now. Just ask for zoom in.
             
         }
@@ -120,19 +159,35 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     
     var didCenterOnce = false
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+//        if !didCenterOnce {
+//            if let myLoc = locations.first {
+//                let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+//                var offsetCoord = myLoc.coordinate
+//                if offsetCoord.latitude > 0 {
+//                    offsetCoord.latitude -= 0.007
+//                } else {
+//                    offsetCoord.latitude += 0.007
+//                }
+//
+//                let region = MKCoordinateRegion(center: offsetCoord, span: span)
+//                mapView.setRegion(region, animated: true)
+//            }
+//        }
+    }
+    
+    func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
         if !didCenterOnce {
-            if let myLoc = locations.first {
-                let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                var offsetCoord = myLoc.coordinate
-                if offsetCoord.latitude > 0 {
-                    offsetCoord.latitude -= 0.007
-                } else {
-                    offsetCoord.latitude += 0.007
-                }
-
-                let region = MKCoordinateRegion(center: offsetCoord, span: span)
-                mapView.setRegion(region, animated: true)
+            didCenterOnce = true
+            let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            var offsetCoord = userLocation.coordinate
+            if offsetCoord.latitude > 0 {
+                offsetCoord.latitude -= 0.007
+            } else {
+                offsetCoord.latitude += 0.007
             }
+
+            let region = MKCoordinateRegion(center: offsetCoord, span: span)
+            mapView.setRegion(region, animated: true)
         }
     }
     
@@ -154,10 +209,12 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         }
         let reuseIdentifier = "pin"
         let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
-
+        annotationView?.canShowCallout = true
+        
         if annotationView == nil {
             let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseIdentifier)
             annotationView.animatesDrop = true
+            annotationView.canShowCallout = true
             return annotationView
 //            annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: reuseIdentifier)
 //            annotationView?.canShowCallout = true
@@ -181,5 +238,41 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         fatalError("not implemented")
     }
     
-
+    var calledOutAnnotation: MKAnnotation?
+    func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+        if let selectedAnnotation = view.annotation {
+            if selectedAnnotation.isEqual(pendingAnnotation) {
+                // do nothing unique if selecting an already temporary pin
+            } else {
+                // if we have a temporary pin, remove it
+                removePendingAnnotation()
+                
+                if selectedAnnotation.isEqual(mapView.userLocation) {
+                    print("] shouldendcheckpointpreview")
+                    delegate?.shouldEndCheckpointPreview() // removes preview vc and pending pin (redundantly)
+                    
+                } else {
+                    if let selectedMapItem = (selectedAnnotation as? CheckpointAnnotation)?.mapItem {
+                        delegate?.shouldPreviewCheckpoint(mapItem: selectedMapItem)
+                    } else {
+                        fatalError("no map item for selected annotation!")
+                    }
+                }
+            }
+            
+            calledOutAnnotation = selectedAnnotation // remember in case we add another checkpoint
+        } else {
+            fatalError("selected annotationview has no annotation")
+        }
+    }
+    
+//    func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+//        print("DEselected annotation: \(view.annotation!.title)")
+//        print("view.annotation?.isEqual(mapView.userLocation): \(view.annotation?.isEqual(mapView.userLocation))")
+//        print("view.annotation?.isEqual(calledOutAnnotation): \(view.annotation?.isEqual(calledOutAnnotation))")
+//        // only want to remove preview when we are deselecting by tapping on map, NOT because tapping on
+//        // another checkpoint. the latter case is already handled.
+//
+//    }
+    
 }

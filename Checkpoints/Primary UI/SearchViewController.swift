@@ -46,10 +46,39 @@ class SearchViewController: UIViewController,
     override func loadView() {
         view = UIView()
         setUpView()
+    }
+    
+    private func setUpView() {
         title = "Search" // remove unless we need this or a full-screen view controller
+
+        header.delegate = self
         header.searchBar.delegate = self
         header.checkpointCountButton.isHidden = true // hide count when we havent added anything
+        
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        
+        view.backgroundColor = UIColor(white: 0.95, alpha: 1)
+        view.addSubview(tableView)
+        view.addSubview(header)
+//        header.heightAnchor.constraint(equalToConstant: 70).isActive = true
+        header.pinToSuperview(edges: [.left, .right])
+        if #available(iOS 11.0, *) {
+            header.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
+        } else {
+            header.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor).isActive = true
+        }
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.pinToSuperview(edges: [.left, .right, .bottom])
+        tableView.topAnchor.constraint(equalTo: header.bottomAnchor).isActive = true
+        tableView.backgroundColor = .clear
+        tableView.register(UINib(nibName: "LocationCell", bundle: nil), forCellReuseIdentifier: "locationCell")
+        tableView.register(UINib(nibName: "CheckpointCell", bundle: nil), forCellReuseIdentifier: "checkpointCell")
+        tableView.isEditing = true
+        self.tableView.tableFooterView = UIView(frame: .zero)
     }
+
     
     func endEditing() {
         header.searchBar.resignFirstResponder()
@@ -133,37 +162,44 @@ class SearchViewController: UIViewController,
         }
     }
     
+    func tableView(_ tableView: UITableView, editingStyleForRowAt indexPath: IndexPath) -> UITableViewCell.EditingStyle {
+        return .none
+    }
+    
+    func tableView(_ tableView: UITableView, shouldIndentWhileEditingRowAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+    
+    func tableView(_ tableView: UITableView, moveRowAt sourceIndexPath: IndexPath, to destinationIndexPath: IndexPath) {
+        assert(sourceIndexPath.section == 1)
+        assert(destinationIndexPath.section == 1)
+        PathFinder.shared.moveDestination(from: sourceIndexPath.row, to: destinationIndexPath.row)
+    }
+    
+    // MARK: - Helpers
+    
     private func markPrimaryAndSecondaryLocationLabels(mapItem: MKMapItem, mainString: inout String?, detailString: inout String?) {
         if let a = mapItem.name {
-            print("using mapitem.name \(a)")
             mainString = a
         } else if let b = mapItem.placemark.title {
-            print("using mapitem.placemark.title")
             mainString = b
         } else if let c = mapItem.placemark.subtitle {
-            print("using mapitem placemark subtitle")
             mainString = c
         } else if let d = mapItem.placemark.locality {
-           print("using maptiem.placemark.locality")
             mainString = d
         } else {
-            print("using maptiem.coordinate")
             mainString = String(format: "Lat: %+.2f, Lon: %.2f", mapItem.placemark.coordinate.latitude, mapItem.placemark.coordinate.longitude)
             detailString = ""
         }
         
         if detailString == nil {
             if let b = mapItem.placemark.title {
-                print("using mapitem.placemark.title")
                 detailString = b
             } else if let c = mapItem.placemark.subtitle {
-                print("using mapitem placemark subtitle")
                 detailString = c
             } else if let d = mapItem.placemark.locality {
-               print("using maptiem.placemark.locality")
                 detailString = d
             } else {
-                print("using maptiem.coordinate")
                 detailString = String(format: "Lat: %+.2f, Lon: %.2f", mapItem.placemark.coordinate.latitude, mapItem.placemark.coordinate.longitude)
             }
         }
@@ -178,11 +214,12 @@ class SearchViewController: UIViewController,
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        
+        header.searchBar.resignFirstResponder()
         // deal with searched or added checkpoints
         if indexPath.section == 0 {
             selectedMapItem = searchResults[indexPath.row]
             delegate?.searchViewControllerDidSelectRow(self)
+            
         } else {
             if let cell = tableView.cellForRow(at: indexPath) as? CheckpointCell {
                 // show checkpoint view controller without add button -> show remove button
@@ -269,31 +306,11 @@ class SearchViewController: UIViewController,
 //        delegate?.searchViewControllerDidSelectCloseAction(self)
 //    }
 
-    // MARK: - Private
 
-    private func setUpView() {
-        header.delegate = self
-        
-        view.layer.cornerRadius = 10
-        view.layer.masksToBounds = true
-        
-        view.backgroundColor = UIColor.init(white: 0.95, alpha: 1)
-        view.addSubview(tableView)
-        view.addSubview(header)
-//        header.heightAnchor.constraint(equalToConstant: 70).isActive = true
-        header.pinToSuperview(edges: [.left, .right])
-        if #available(iOS 11.0, *) {
-            header.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor).isActive = true
-        } else {
-            header.topAnchor.constraint(equalTo: view.layoutMarginsGuide.topAnchor).isActive = true
-        }
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.pinToSuperview(edges: [.left, .right, .bottom])
-        tableView.topAnchor.constraint(equalTo: header.bottomAnchor).isActive = true
-        tableView.backgroundColor = .clear
-        tableView.register(UINib(nibName: "LocationCell", bundle: nil), forCellReuseIdentifier: "locationCell")
-        tableView.register(UINib(nibName: "CheckpointCell", bundle: nil), forCellReuseIdentifier: "checkpointCell")
-
+    
+    override func resignFirstResponder() -> Bool {
+        print("resigning first responder")
+        let resign = super.resignFirstResponder()
+        return resign && header.searchBar.resignFirstResponder()
     }
 }

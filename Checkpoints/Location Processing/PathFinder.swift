@@ -44,6 +44,109 @@ class PathFinder {
     }
     private var primData = [PrimDatum]()
     
+    // reorients distance matrix to account for change in indices
+    func moveDestination(from currentIndex: Int, to otherIndex: Int) {
+        assertReorganizeDistanceCorrectness() // (comment out later) test correctness of this crucial helper function
+        
+    }
+    
+    func assertReorganizeDistanceCorrectness() {
+
+        let testMatrix: [[(Int, Int)]] = [
+            [],
+            [(1, 0)],
+            [(2, 0), (2, 1)],
+            [(3, 0), (3, 1), (3, 2)],
+            [(4, 0), (4, 1), (4, 2), (4, 3)],
+            [(5, 0), (5, 1), (5, 2), (5, 3), (5, 4)]
+        ]
+        
+        // test swapping 0 -> 5
+        var test1 = testMatrix
+        reorganizeDistanceMatrix(from: 0, to: 5, matrix: &test1)
+        /*
+         [],
+         [(1, 0)],
+         [(2, 0), (2, 1)],
+         [(3, 0), (3, 1), (3, 2)],
+         [(4, 0), (4, 1), (4, 2), (4, 3)],
+         [(5, 0), (5, 1), (5, 2), (5, 3), (5, 4)]
+         
+         [, (5, 1), (5, 2), (5, 3), (5, 4)]
+         [(1, 0), ],
+         [(2, 0), (2, 1)],
+         [(3, 0), (3, 1), (3, 2)],
+         [(4, 0), (4, 1), (4, 2), (4, 3)],
+         []
+        
+        */
+        assert(true)
+        
+        // test swapping 5 -> 0
+        
+        // test swapping 0 -> 1
+        
+        // test swapping 4 -> 3
+        
+        // test swapping 3 -> 4
+        
+    }
+         
+    private func reorganizeDistanceMatrix<T>(from _currentIndex: Int, to _otherIndex: Int, matrix: inout [[T]]) {
+        // example: 3 -> 5 takes index 3 to 5
+        // this would move the 3 entries in index 3 to the place of index 5, shifting 5 down to 4
+        // index 5 (formerly items of index 3) need two entries to be adjusted to the proper length
+        // this means that we need to move the entry at index 3 of the entries that we surpassed and append them to index 5's array of 3 entries
+        
+        
+        // means that i want everything that was at index 3 to be represented as a 5, and 4 and 5 must now be represented by indices 3 and 4
+        /*
+            []
+            [1-0]
+            [2-0, 2-1]
+            [3-0, 3-1, 3-2]
+            [4-0, 4-1, 4-2, 4-3]
+            -> move 2 to 4 (make c take the place of e)
+         representation
+            [] (0:a, 1:b, 2:c, 3:d, 4:e)
+            [b-a]
+            [c-a, c-b]
+            [d-a, d-b, d-c]
+            [e-a, e-b, e-c, e-d]
+         -> final
+         0->0 a[] (0:a, 1:b, 2:c, 3:d, 4:e)
+         1->1 b[b-a]
+         4->3 e[e-a, e-b] * moved this row from 4th index to 2nd index
+         2->4 c[c-a, c-b, e-c] * placed entry in source row at `currentIndex` at end of the next row
+         3->5 d[d-a, d-b, d-c, e-d] * placed the 1 + `currentIndex` entry at end of this row
+        */
+        assert(_currentIndex < distanceMatrix.count)
+        assert(_otherIndex < distanceMatrix.count)
+        if _currentIndex == _otherIndex { return }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        // garbage incorrect code:
+//        // for consistency, make currentIndex < otherIndex
+//        let currentIndex = min(_currentIndex, _otherIndex)
+//        let otherIndex = max(_currentIndex, _otherIndex)
+        
+//        let movingRow = matrix[currentIndex]
+//        matrix.remove(at: currentIndex)
+//        matrix.insert(Array(movingRow[0..<currentIndex]), at: otherIndex)
+//
+//        // copy entries from back of moving row to
+//        for transplantSourceIndex in currentIndex..<movingRow.count {
+//            matrix[transplantSourceIndex + 1].append(movingRow[transplantSourceIndex])
+//        }
+    }
+    
     // add destination and precalculate distances with other locations
     func addDestination(mapItem: MKMapItem) {
         destinations.append(mapItem) // may want to compute edge weights to this destination
@@ -279,6 +382,14 @@ class PathFinder {
         }
     }
     
+    func calculateDistanceFromCoordinate(coord: CLLocationCoordinate2D) -> Double {
+        if let loc = locationManager.location {
+            return loc.distance(from: CLLocation(latitude: coord.latitude, longitude: coord.longitude))
+        }
+        return -1
+    }
+
+    
     // MARK: - Private Member Functions
     
     private func distance(_ a: Int, _ b: Int) -> Double {
@@ -398,6 +509,23 @@ class PathFinder {
         }
         
         return minLeftEdge + minRightEdge + mstWeight + pathDistance < bestPathDistance
+    }
+    
+    // Locations helpers
+    func computeMapItem(for coordinate: CLLocationCoordinate2D, completion: @escaping (MKMapItem?) -> ()) {
+        let x = CLGeocoder()
+        let loc = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        x.reverseGeocodeLocation(loc) { (placemarks, error) in
+            if let e = error {
+                print(e)
+                print("Error computing address")
+                completion(nil)
+            }
+            if let pm = placemarks?.first {
+                let mapItem = MKMapItem(placemark: MKPlacemark(placemark: pm))
+                completion(mapItem)
+            }
+        }
     }
     
 }

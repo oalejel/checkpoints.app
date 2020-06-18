@@ -10,9 +10,10 @@ import UIKit
 import MapKit
 import Contacts
 
-protocol CheckpointViewControllerDelegate {
-    func addCheckpointToPath(mapItem: MKMapItem)
-}
+//protocol CheckpointViewControllerDelegate {
+//    func addCheckpointToPath(mapItem: MKMapItem)
+//    func focusOnMapItem(_ mapItem: MKMapItem)
+//}
 
 class CheckpointViewController: UIViewController {
     
@@ -25,12 +26,12 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var distanceLabel: UILabel!
     
     var mapItem: MKMapItem
-    var delegate: CheckpointViewControllerDelegate?
+    var delegate: LocationsDelegate?
+    var checkpointAlreadyAdded: Bool
     
-    init(mapItem: MKMapItem) {
+    init(mapItem: MKMapItem, alreadyAdded: Bool) {
         self.mapItem = mapItem
-//        let x = mapItem.placemark
-//        print(x.title, x.locality, x.subLocality, x.country, x.name, x.postalAddress, x.postalCode)
+        self.checkpointAlreadyAdded = alreadyAdded
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -48,9 +49,12 @@ class CheckpointViewController: UIViewController {
 //        closeButton.backgroundColor = .lightGray
 //        closeButton.layer.cornerRadius = 15
 //        closeButton.layer.masksToBounds = true
-        let dist = Loca
-        
-        distanceLabel.text = "About \() mi from current location"
+        let dist = PathFinder.shared.calculateDistanceFromCoordinate(coord: mapItem.placemark.coordinate) / 1609.34
+        if dist < 11 {
+            distanceLabel.text = String(format: "About %.1f mi from current location", dist)
+        } else {
+            distanceLabel.text = "About \(Int(dist)) mi from current location"
+        }
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true
@@ -64,16 +68,28 @@ class CheckpointViewController: UIViewController {
             addressLabel.text = "\(mapItem.placemark.coordinate)"
         }
         
+        if checkpointAlreadyAdded {
+            addButton.isHidden = true
+//            removeButton.IsHidden = false
+        } else {
+            addButton.isHidden = false
+//            removeButton.IsHidden = true
+        }
     }
 
     @IBAction func closePressed(_ sender: UIButton) {
 //        dismiss(animated: true, completion: nil)
+        delegate?.shouldEndCheckpointPreview()
         navigationController?.popViewController(animated: true)
     }
     
     @IBAction func addCheckpointPressed(_ sender: UIButton) {
         delegate?.addCheckpointToPath(mapItem: mapItem)
         navigationController?.popViewController(animated: true)
+    }
+    
+    @IBAction func focusPressed(_ sender: Any) {
+        delegate?.focusOnMapItem(mapItem)
     }
     
     /*

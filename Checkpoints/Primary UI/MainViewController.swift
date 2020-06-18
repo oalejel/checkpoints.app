@@ -23,7 +23,7 @@ protocol OverlayContainerDelegate {
 }
 
 enum UserState {
-    case Searching, AddingCheckpoint
+    case Searching, PreviewCheckpoint
 }
 
 class MainViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
@@ -77,10 +77,10 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
         
         if state == .Searching {
             
-        } else if state == .AddingCheckpoint {
-            if let cvc = viewController as? CheckpointViewController {
-                
-            }
+        } else if state == .PreviewCheckpoint {
+//            if let cvc = viewController as? CheckpointViewController {
+//                
+//            }
         }
     }
 }
@@ -88,16 +88,17 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 extension MainViewController: SearchViewControllerDelegate {
     
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
-        let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!)
+        let alreadyAdded = PathFinder.shared.destinations.contains(searchViewController.selectedMapItem!)
+        let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded)
         cvc.delegate = self
-        state = .AddingCheckpoint
+        state = .PreviewCheckpoint
         overlayNavigationController.push(cvc, animated: true)
         // temporarily show the pin on the map
-        mapsViewController.showTemporaryPin(mapItem: searchViewController.selectedMapItem!)
+        mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
     }
     
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
-        
+        state = .Searching
     }
 
     func searchViewControllerDidSearchString(_ string: String) {
@@ -105,7 +106,11 @@ extension MainViewController: SearchViewControllerDelegate {
     }
 }
 
-extension MainViewController: CheckpointViewControllerDelegate {
+extension MainViewController: LocationsDelegate {
+
+    func focusOnMapItem(_ mapItem: MKMapItem) {
+        mapsViewController.showPendingPin(mapItem: mapItem)
+    }
     
     func addCheckpointToPath(mapItem: MKMapItem) {
         PathFinder.shared.addDestination(mapItem: mapItem)
@@ -123,11 +128,42 @@ extension MainViewController: CheckpointViewControllerDelegate {
         searchViewController.header.checkpointCountButton.setTitle(checkpointsText, for: .normal)
         searchViewController.header.checkpointCountButton.isHidden = false
     }
-}
-
-extension MainViewController: LocationsDelegate {
+    
+    func shouldEndCheckpointPreview() {
+        state = .Searching
+        mapsViewController.removePendingAnnotation()
+        if overlayNavigationController.topViewController is CheckpointViewController {
+            print("] resigning search first responder")
+            let _ = searchViewController.resignFirstResponder()
+            overlayNavigationController.popViewController(animated: true)
+            overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+        }
+    }
+    
+    func shouldPreviewCheckpoint(mapItem: MKMapItem) {
+        state = .PreviewCheckpoint
+        if overlayNavigationController.topViewController is CheckpointViewController {
+            overlayNavigationController.popViewController(animated: false)
+        }
+        
+        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: true)
+        cvc.delegate = self
+        state = .PreviewCheckpoint
+        searchViewController.selectedMapItem = mapItem
+        overlayNavigationController.push(cvc, animated: true)
+    }
+    
     func updatedSearchResults(mapItems: [MKMapItem]) {
         searchViewController.refreshSearchResults(mapItems)
+    }
+    
+    func manualPinPlaced(for mapItem: MKMapItem) {
+        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: false)
+        cvc.delegate = self
+        state = .PreviewCheckpoint
+        overlayNavigationController.push(cvc, animated: true)
+        // temporarily show the pin on the map
+        mapsViewController.showPendingPin(mapItem: mapItem)
     }
 }
 
@@ -150,7 +186,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
                                         scrollViewDrivingOverlay overlayViewController: UIViewController) -> UIScrollView? {
         if state == .Searching {
             return searchViewController.tableView
-        } else if state == .AddingCheckpoint {
+        } else if state == .PreviewCheckpoint {
 //            if let scrollView = (navigationController?.topViewController as? CheckpointViewController)?.scrollView {
 //                return scrollView
 //            }
@@ -170,7 +206,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             let hitHeader = header.bounds.contains(coordinateSpace.convert(point, to: header))
             searchViewController.header.searchBar.resignFirstResponder()
             return hitHeader
-        case .AddingCheckpoint:
+        case .PreviewCheckpoint:
 //            let vc = overlayNavigationController.topViewController!
 //            let convertedPoint = coordinateSpace.convert(point, to: vc.view)
 //            let yes = vc.view.bounds.contains(convertedPoint)

@@ -34,6 +34,7 @@
                     <rect key="frame" x="357" y="34.5" width="41" height="30"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="30" id="iIz-7l-pmi"/>
+                        <constraint firstAttribute="width" constant="41" id="so0-eV-5GJ"/>
                     </constraints>
                     <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="15"/>
                     <state key="normal" title="Close"/>
@@ -79,6 +80,9 @@
                         <constraint firstAttribute="height" constant="47" id="I6U-xj-iej"/>
                     </constraints>
                     <state key="normal" title="Focus on Map"/>
+                    <connections>
+                        <action selector="focusPressed:" destination="-1" eventType="touchUpInside" id="iPY-fw-FL4"/>
+                    </connections>
                 </button>
                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="car" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mAz-fC-ie5">
                     <rect key="frame" x="16" y="249" width="24" height="17.5"/>
@@ -103,7 +107,6 @@
                 <constraint firstItem="wtT-Y9-JU5" firstAttribute="firstBaseline" secondItem="a2S-Kf-zJO" secondAttribute="firstBaseline" id="9mN-0i-D9a"/>
                 <constraint firstItem="a2S-Kf-zJO" firstAttribute="top" secondItem="YCE-p8-BIc" secondAttribute="bottom" constant="16" id="AOm-yc-AWJ"/>
                 <constraint firstItem="DFw-A0-GaL" firstAttribute="top" secondItem="wtT-Y9-JU5" secondAttribute="bottom" constant="16" id="AQ4-NO-5fb"/>
-                <constraint firstItem="mAz-fC-ie5" firstAttribute="top" secondItem="wtT-Y9-JU5" secondAttribute="bottom" constant="16" id="Km3-CK-1wI"/>
                 <constraint firstItem="WKi-yT-ZOO" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="2wT-x8-r6M" secondAttribute="trailing" constant="8" id="Mia-FL-jAO"/>
                 <constraint firstItem="WKi-yT-ZOO" firstAttribute="centerY" secondItem="2wT-x8-r6M" secondAttribute="centerY" id="Og2-31-D1g"/>
                 <constraint firstItem="kci-35-Jmz" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" constant="20" id="RbV-cK-IOF"/>
