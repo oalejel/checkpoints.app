@@ -67,7 +67,7 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
         case .medium:
             return availableSpace / 1.5
         case .minimum:
-            return availableSpace * 2 / 7
+            return (availableSpace * 2 / 7) + 32
         }
     }
 }
@@ -89,12 +89,20 @@ extension MainViewController: SearchViewControllerDelegate {
     
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
         let alreadyAdded = PathFinder.shared.destinations.contains(searchViewController.selectedMapItem!)
-        let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded)
-        cvc.delegate = self
         state = .PreviewCheckpoint
-        overlayNavigationController.push(cvc, animated: true)
-        // temporarily show the pin on the map
-        mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
+        if alreadyAdded {
+            if let existingAnnotation = mapsViewController.mapView.annotations.first(where: { ($0 as? CheckpointAnnotation)?.mapItem == searchViewController.selectedMapItem }) {
+                mapsViewController.mapView.selectAnnotation(existingAnnotation, animated: true)
+            } else {
+                fatalError("tried to find a checkpoint not on map")
+            }
+        } else { // temporarily show the pin on the map
+            
+            let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded)
+            cvc.delegate = self
+            overlayNavigationController.push(cvc, animated: true)
+            mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
+        }
     }
     
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
@@ -119,6 +127,23 @@ extension MainViewController: LocationsDelegate {
         mapsViewController.savePin(for: mapItem, focus: true)
         overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
         
+        refreshCheckpointsButton()
+    }
+    
+    func removeCheckpointFromPath(mapItem: MKMapItem) {
+        guard let removeIndex = PathFinder.shared.destinations.firstIndex(of: mapItem) else {
+            fatalError("Attempted to remove checkpoint not in pathfinder")
+        }
+        
+        DispatchQueue.main.async {
+            self.mapsViewController.removePin(for: PathFinder.shared.destinations[removeIndex])
+            PathFinder.shared.removeDestination(atIndex: removeIndex)
+            self.refreshCheckpointsButton()
+            self.searchViewController.tableView.reloadData()
+        }
+    }
+    
+    func refreshCheckpointsButton() {
         var checkpointsText = "1 checkpoint added"
         if PathFinder.shared.destinations.count != 1 {
             checkpointsText = "\(PathFinder.shared.destinations.count) checkpoints added"
@@ -126,7 +151,12 @@ extension MainViewController: LocationsDelegate {
             checkpointsText = "1 checkpoint added"
         }
         searchViewController.header.checkpointCountButton.setTitle(checkpointsText, for: .normal)
-        searchViewController.header.checkpointCountButton.isHidden = false
+        
+        if PathFinder.shared.destinations.count == 0 {
+            searchViewController.header.checkpointCountButton.isHidden = true
+        } else {
+            searchViewController.header.checkpointCountButton.isHidden = false
+        }
     }
     
     func shouldEndCheckpointPreview() {

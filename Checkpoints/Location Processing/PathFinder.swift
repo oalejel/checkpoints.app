@@ -20,8 +20,10 @@ class PathFinder {
     static let shared = PathFinder() // shared singleton
     var locationManager = CLLocationManager()
     
-    private(set) var destinations = [MKMapItem]()
-    private var bestPath = [Int]()
+    private(set) var destinations: [MKMapItem] = []
+    private(set) var destIntermediateIndices: [Int] = [] // stores indexes that index into destinations, so that `destinations` never has to change ordering (even after delete)
+    
+    private var bestPath: [Int] = []
     private var bestPathDistance = Double.infinity
     let destinationRequestSemaphore = DispatchSemaphore(value: 1)
     
@@ -124,14 +126,6 @@ class PathFinder {
         assert(_otherIndex < distanceMatrix.count)
         if _currentIndex == _otherIndex { return }
         
-        
-        
-        
-        
-        
-        
-        
-        
         // garbage incorrect code:
 //        // for consistency, make currentIndex < otherIndex
 //        let currentIndex = min(_currentIndex, _otherIndex)
@@ -149,19 +143,22 @@ class PathFinder {
     
     // add destination and precalculate distances with other locations
     func addDestination(mapItem: MKMapItem) {
+        
         destinations.append(mapItem) // may want to compute edge weights to this destination
+        destIntermediateIndices.append(destIntermediateIndices.count) // first item -> gets index 0
         
         DispatchQueue.global(qos: .userInitiated).async {
             // no need to use mutex here, since addDestination is signaled by user interaction
+            print("waiting on sem in adddest")
             self.destinationRequestSemaphore.wait() // block a remove operation
+            print("got into add sem")
             
             self.distanceMatrix.append([])
             let rowIndex = self.distanceMatrix.count - 1 // hold on to this in case we get another concurrent call?
             self.distanceMatrix[rowIndex].reserveCapacity(rowIndex)
             
-           
-            
             for colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
+                assert(mapItem != self.destinations[colIndex]) // catch an old bug where same location was added
                 let request = MKDirections.Request()
                 request.source = self.destinations[colIndex]
                 request.destination = mapItem
@@ -184,6 +181,7 @@ class PathFinder {
             }
             print(self.distanceMatrix)
             self.destinationRequestSemaphore.signal() // allow others to join
+            print("signaled from adddest")
             
             // for now, calculate actual travel distance (by car)
             // ignore changes in traffic conditions, for example
@@ -192,14 +190,20 @@ class PathFinder {
         }
     }
     
+    // index based on intermediate indexer
     func removeDestination(atIndex index: Int) {
+        print("wait from removedest")
         self.destinationRequestSemaphore.wait()
-        destinations.remove(at: index)
-        distanceMatrix.remove(at: index)
+        print("got into remove sem")
+        destinations.remove(at: destIntermediateIndices[index])
+        distanceMatrix.remove(at: destIntermediateIndices[index])
+        
         for i in (index..<distanceMatrix.count) {
-            distanceMatrix[i].remove(at: index) // index..<count rows have relevant entries
+            distanceMatrix[i].remove(at: destIntermediateIndices[index]) // index..<count rows have relevant entries
         }
+        destIntermediateIndices.remove(at: index)
         self.destinationRequestSemaphore.signal()
+        print("signal from removedest")
     }
     
     // warning: may want to add a progress update closure to give updates to the progress of the computation
@@ -392,6 +396,7 @@ class PathFinder {
     
     // MARK: - Private Member Functions
     
+    // uses raw indices (not based on intermediate indexer)
     private func distance(_ a: Int, _ b: Int) -> Double {
         if a == b { return 0.0 }
         let large = max(a,b)

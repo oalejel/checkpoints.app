@@ -75,7 +75,7 @@ class SearchViewController: UIViewController,
         tableView.backgroundColor = .clear
         tableView.register(UINib(nibName: "LocationCell", bundle: nil), forCellReuseIdentifier: "locationCell")
         tableView.register(UINib(nibName: "CheckpointCell", bundle: nil), forCellReuseIdentifier: "checkpointCell")
-        tableView.isEditing = true
+        tableView.isEditing = false // CHANGE THIS LINE WHEN YOU WANT TO ALLOW REORDERING BY DEFAULT
         self.tableView.tableFooterView = UIView(frame: .zero)
     }
 
@@ -221,8 +221,10 @@ class SearchViewController: UIViewController,
             delegate?.searchViewControllerDidSelectRow(self)
             
         } else {
-            if let cell = tableView.cellForRow(at: indexPath) as? CheckpointCell {
+            if let _ = tableView.cellForRow(at: indexPath) as? CheckpointCell {
                 // show checkpoint view controller without add button -> show remove button
+                selectedMapItem = PathFinder.shared.destinations[indexPath.row]
+                delegate?.searchViewControllerDidSelectRow(self)
             } else {
                 fatalError("unexpected cell class")
             }
@@ -270,10 +272,6 @@ class SearchViewController: UIViewController,
         return true
     }
 
-//    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
-//
-//    }
-
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchText.isEmpty {
             searchResults.removeAll()
@@ -295,10 +293,6 @@ class SearchViewController: UIViewController,
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-    
-    
-    
-    
 
     // MARK: - DetailHeaderViewDelegate
 

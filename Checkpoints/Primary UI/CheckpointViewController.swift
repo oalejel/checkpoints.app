@@ -22,6 +22,7 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var addressLabel: UILabel!
     @IBOutlet weak var closeButton: UIButton!
     @IBOutlet weak var addButton: UIButton!
+    @IBOutlet weak var removeButton: UIButton!
     @IBOutlet weak var mapFocusButton: UIButton!
     @IBOutlet weak var distanceLabel: UILabel!
     
@@ -58,6 +59,8 @@ class CheckpointViewController: UIViewController {
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true
+        removeButton.layer.cornerRadius = 8
+        removeButton.layer.masksToBounds = true
         
         nameLabel.text = mapItem.name ?? mapItem.placemark.subLocality ?? mapItem.placemark.locality ?? "Lat: \(mapItem.placemark.coordinate.latitude), Lon: \(mapItem.placemark.coordinate.longitude)"
         
@@ -70,10 +73,10 @@ class CheckpointViewController: UIViewController {
         
         if checkpointAlreadyAdded {
             addButton.isHidden = true
-//            removeButton.IsHidden = false
+            removeButton.isHidden = false
         } else {
             addButton.isHidden = false
-//            removeButton.IsHidden = true
+            removeButton.isHidden = true
         }
     }
 
@@ -90,6 +93,11 @@ class CheckpointViewController: UIViewController {
     
     @IBAction func focusPressed(_ sender: Any) {
         delegate?.focusOnMapItem(mapItem)
+    }
+    
+    @IBAction func removeCheckpointPressed(_ sender: UIButton) {
+        delegate?.removeCheckpointFromPath(mapItem: mapItem)
+        navigationController?.popViewController(animated: true)
     }
     
     /*

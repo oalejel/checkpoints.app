@@ -17,6 +17,7 @@ protocol LocationsDelegate {
     func manualPinPlaced(for mapItem: MKMapItem) // for long press to drop pin gesture
     func focusOnMapItem(_ mapItem: MKMapItem)
     func addCheckpointToPath(mapItem: MKMapItem)
+    func removeCheckpointFromPath(mapItem: MKMapItem)
 }
 
 class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
@@ -140,6 +141,19 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         }
     }
     
+    func removePin(for mapItem: MKMapItem) {
+        mapView.deselectAnnotation(calledOutAnnotation, animated: true)
+        if let p = pendingAnnotation { mapView.removeAnnotation(p) }
+        pendingAnnotation = nil
+        if let matchingAnnotation = mapView.annotations.first(where: {
+            ($0 as? CheckpointAnnotation)?.mapItem == mapItem
+        }) {
+            mapView.removeAnnotation(matchingAnnotation)
+        } else {
+            fatalError("Attempted to remove annotation that doesnt exist")
+        }
+    }
+    
     // MARK: - Mapview Delegate
     
     func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
@@ -250,7 +264,6 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                 if selectedAnnotation.isEqual(mapView.userLocation) {
                     print("] shouldendcheckpointpreview")
                     delegate?.shouldEndCheckpointPreview() // removes preview vc and pending pin (redundantly)
-                    
                 } else {
                     if let selectedMapItem = (selectedAnnotation as? CheckpointAnnotation)?.mapItem {
                         delegate?.shouldPreviewCheckpoint(mapItem: selectedMapItem)
