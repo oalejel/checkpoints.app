@@ -18,33 +18,22 @@
                     <rect key="frame" x="0.0" y="16" width="375" height="98"/>
                     <subviews>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="center" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="SDS-ke-xNi">
-                            <rect key="frame" x="16" y="0.0" width="343" height="35"/>
+                            <rect key="frame" x="16" y="0.0" width="343" height="27.5"/>
                             <subviews>
                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Checkpoints" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jAt-jh-rsL">
-                                    <rect key="frame" x="0.0" y="1" width="169" height="33.5"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="343" height="27.5"/>
                                     <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="28"/>
                                     <nil key="textColor"/>
                                     <nil key="highlightedColor"/>
                                 </label>
-                                <button opaque="NO" contentMode="scaleAspectFit" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fBD-dg-YPW">
-                                    <rect key="frame" x="308" y="0.0" width="35" height="35"/>
-                                    <constraints>
-                                        <constraint firstAttribute="height" constant="35" id="DYI-0B-nRw"/>
-                                        <constraint firstAttribute="width" constant="35" id="O23-va-C1J"/>
-                                    </constraints>
-                                    <fontDescription key="fontDescription" type="system" pointSize="26"/>
-                                    <state key="normal" image="person.circle" catalog="system">
-                                        <preferredSymbolConfiguration key="preferredSymbolConfiguration" scale="medium"/>
-                                    </state>
-                                </button>
                             </subviews>
                         </stackView>
                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mXo-Di-NWX">
-                            <rect key="frame" x="16" y="35" width="343" height="24.5"/>
+                            <rect key="frame" x="16" y="27.5" width="343" height="24.5"/>
                             <state key="normal" title="0 checkpoints added"/>
                         </button>
                         <searchBar userInteractionEnabled="NO" contentMode="redraw" searchBarStyle="minimal" placeholder="Search name or coordinate" translatesAutoresizingMaskIntoConstraints="NO" id="cm4-he-xbO">
-                            <rect key="frame" x="8" y="59.5" width="359" height="38.5"/>
+                            <rect key="frame" x="8" y="52" width="359" height="46"/>
                             <textInputTraits key="textInputTraits"/>
                         </searchBar>
                     </subviews>
@@ -68,7 +57,6 @@
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <connections>
                 <outlet property="checkpointCountButton" destination="mXo-Di-NWX" id="m2r-35-GuR"/>
-                <outlet property="peopleButton" destination="fBD-dg-YPW" id="85j-76-yjD"/>
                 <outlet property="searchBar" destination="cm4-he-xbO" id="26O-gJ-q5O"/>
                 <outlet property="titleLabel" destination="jAt-jh-rsL" id="MLW-YW-Q8o"/>
                 <outlet property="vstack" destination="cus-ys-xUL" id="EwT-0t-dL6"/>
@@ -76,7 +64,4 @@
             <point key="canvasLocation" x="117.59999999999999" y="73.763118440779621"/>
         </view>
     </objects>
-    <resources>
-        <image name="person.circle" catalog="system" width="128" height="121"/>
-    </resources>
 </document>
