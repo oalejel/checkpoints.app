@@ -15,10 +15,11 @@ protocol DetailHeaderViewDelegate: AnyObject {
 class DetailHeaderView: UIView {
     
     @IBOutlet weak var titleLabel: UILabel!
-    @IBOutlet weak var peopleButton: UIButton!
+//    @IBOutlet weak var peopleButton: UIButton!
     @IBOutlet weak var searchBar: UISearchBar!
     @IBOutlet weak var vstack: UIStackView!
-    @IBOutlet weak var checkpointCountButton: UIButton!
+//    @IBOutlet weak var checkpointCountButton: UIButton!
+    @IBOutlet weak var routeButton: UIButton!
     
     enum State {
         case Search, LocationPreview
@@ -29,45 +30,12 @@ class DetailHeaderView: UIView {
     weak var searchBarDelegate: UISearchBarDelegate?
 
     override func willMove(toSuperview newSuperview: UIView?) {
-        peopleButton.backgroundColor = UIColor(white: 0.95, alpha: 1)
-        peopleButton.tintColor = .black
-        peopleButton.layer.cornerRadius = 35/2
         searchBar.isUserInteractionEnabled = true
         
-//        peopleButton.contentHorizontalAlignment = .fill
-//        peopleButton.contentVerticalAlignment =  .fill
+        routeButton.contentEdgeInsets = .init(top: 0, left: 16, bottom: 0, right: 16)
+        routeButton.layer.cornerRadius = 8
+        routeButton.layer.masksToBounds = true
+        routeButton.isHidden = true // hide til we have enough checkpoints
     }
-    
-    func previewLocation() {
-//        if self.state == .Search { // modify UI
-//            let label = UILabel()
-//            label.text = labelText
-//            let button = UIButton()
-//            button.addTarget(self, action: #selector(exitContext), for: .touchUpInside)
-//    //        button.backgroundColor = UIColor(white: 0.9, alpha: 1)
-//            if #available(iOS 13.0, *) {
-//                button.setImage(UIImage(systemName: "xmark"), for: .normal)
-//            } else {
-//                // Fallback on earlier versions
-//            }
-//            let hstack = UIStackView(arrangedSubviews: [
-//                label, button
-//            ])
-//            vstack.insertArrangedSubview(hstack, at: 0)
-//        } else {
-//
-//
-//        }
-//
-//        //
-    }
-    
-    // adds horizontal stack view with
-    func insertExitableContextLabel(labelText: String) {
-    }
-    
-    @objc func exitContext(button: UIButton) {
-        
-    }
-    
+            
 }

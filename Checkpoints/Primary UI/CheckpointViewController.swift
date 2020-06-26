@@ -25,6 +25,7 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var removeButton: UIButton!
     @IBOutlet weak var mapFocusButton: UIButton!
     @IBOutlet weak var distanceLabel: UILabel!
+    @IBOutlet weak var makeStartButton: UIButton!
     
     var mapItem: MKMapItem
     var delegate: LocationsDelegate?
@@ -50,6 +51,7 @@ class CheckpointViewController: UIViewController {
 //        closeButton.backgroundColor = .lightGray
 //        closeButton.layer.cornerRadius = 15
 //        closeButton.layer.masksToBounds = true
+        
         let dist = PathFinder.shared.calculateDistanceFromCoordinate(coord: mapItem.placemark.coordinate) / 1609.34
         if dist < 11 {
             distanceLabel.text = String(format: "About %.1f mi from current location", dist)
@@ -61,6 +63,8 @@ class CheckpointViewController: UIViewController {
         addButton.layer.masksToBounds = true
         removeButton.layer.cornerRadius = 8
         removeButton.layer.masksToBounds = true
+        makeStartButton.layer.masksToBounds = true
+        makeStartButton.layer.cornerRadius = 8
         
         nameLabel.text = mapItem.name ?? mapItem.placemark.subLocality ?? mapItem.placemark.locality ?? "Lat: \(mapItem.placemark.coordinate.latitude), Lon: \(mapItem.placemark.coordinate.longitude)"
         
@@ -74,9 +78,11 @@ class CheckpointViewController: UIViewController {
         if checkpointAlreadyAdded {
             addButton.isHidden = true
             removeButton.isHidden = false
+            makeStartButton.isHidden = false
         } else {
             addButton.isHidden = false
             removeButton.isHidden = true
+            makeStartButton.isHidden = true
         }
     }
 
@@ -87,7 +93,7 @@ class CheckpointViewController: UIViewController {
     }
     
     @IBAction func addCheckpointPressed(_ sender: UIButton) {
-        delegate?.addCheckpointToPath(mapItem: mapItem)
+        delegate?.addCheckpointToPath(mapItem: mapItem, focus: true)
         navigationController?.popViewController(animated: true)
     }
     
@@ -98,6 +104,10 @@ class CheckpointViewController: UIViewController {
     @IBAction func removeCheckpointPressed(_ sender: UIButton) {
         delegate?.removeCheckpointFromPath(mapItem: mapItem)
         navigationController?.popViewController(animated: true)
+    }
+    
+    @IBAction func makeStartPressed(_ sender: Any) {
+        
     }
     
     /*

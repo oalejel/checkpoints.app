@@ -17,28 +17,34 @@
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" distribution="fillProportionally" alignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="cus-ys-xUL">
                     <rect key="frame" x="0.0" y="16" width="375" height="98"/>
                     <subviews>
-                        <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="center" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="SDS-ke-xNi">
-                            <rect key="frame" x="16" y="0.0" width="343" height="27.5"/>
+                        <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" alignment="top" spacing="4" translatesAutoresizingMaskIntoConstraints="NO" id="SDS-ke-xNi">
+                            <rect key="frame" x="16" y="0.0" width="343" height="36.5"/>
                             <subviews>
                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Checkpoints" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="jAt-jh-rsL">
-                                    <rect key="frame" x="0.0" y="0.0" width="343" height="27.5"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="169" height="33.5"/>
                                     <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="28"/>
                                     <nil key="textColor"/>
                                     <nil key="highlightedColor"/>
                                 </label>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="UC4-bm-Iaq">
+                                    <rect key="frame" x="296" y="0.0" width="47" height="33"/>
+                                    <color key="backgroundColor" systemColor="systemBlueColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                    <state key="normal" title="Route">
+                                        <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                    </state>
+                                </button>
                             </subviews>
+                            <constraints>
+                                <constraint firstItem="UC4-bm-Iaq" firstAttribute="height" secondItem="jAt-jh-rsL" secondAttribute="height" multiplier="0.985075" id="4Ub-bA-Czi"/>
+                            </constraints>
                         </stackView>
-                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mXo-Di-NWX">
-                            <rect key="frame" x="16" y="27.5" width="343" height="24.5"/>
-                            <state key="normal" title="0 checkpoints added"/>
-                        </button>
                         <searchBar userInteractionEnabled="NO" contentMode="redraw" searchBarStyle="minimal" placeholder="Search name or coordinate" translatesAutoresizingMaskIntoConstraints="NO" id="cm4-he-xbO">
-                            <rect key="frame" x="8" y="52" width="359" height="46"/>
+                            <rect key="frame" x="8" y="36.5" width="359" height="61.5"/>
                             <textInputTraits key="textInputTraits"/>
                         </searchBar>
                     </subviews>
                     <constraints>
-                        <constraint firstItem="mXo-Di-NWX" firstAttribute="leading" secondItem="jAt-jh-rsL" secondAttribute="leading" id="UXO-L5-Iof"/>
                         <constraint firstItem="SDS-ke-xNi" firstAttribute="leading" secondItem="cus-ys-xUL" secondAttribute="leading" constant="16" id="feE-OH-UHt"/>
                         <constraint firstAttribute="trailing" secondItem="cm4-he-xbO" secondAttribute="trailing" constant="8" id="g0L-sS-eHO"/>
                         <constraint firstAttribute="trailing" secondItem="SDS-ke-xNi" secondAttribute="trailing" constant="16" id="jMV-Rh-7Qb"/>
@@ -56,7 +62,7 @@
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
             <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
             <connections>
-                <outlet property="checkpointCountButton" destination="mXo-Di-NWX" id="m2r-35-GuR"/>
+                <outlet property="routeButton" destination="UC4-bm-Iaq" id="Bhk-G4-v8s"/>
                 <outlet property="searchBar" destination="cm4-he-xbO" id="26O-gJ-q5O"/>
                 <outlet property="titleLabel" destination="jAt-jh-rsL" id="MLW-YW-Q8o"/>
                 <outlet property="vstack" destination="cus-ys-xUL" id="EwT-0t-dL6"/>

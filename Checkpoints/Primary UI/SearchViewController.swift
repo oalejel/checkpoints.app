@@ -14,6 +14,7 @@ protocol SearchViewControllerDelegate: AnyObject {
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController)
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController)
     func searchViewControllerDidSearchString(_ string: String)
+    func routePressed()
 }
 
 class SearchViewController: UIViewController,
@@ -53,7 +54,8 @@ class SearchViewController: UIViewController,
 
         header.delegate = self
         header.searchBar.delegate = self
-        header.checkpointCountButton.isHidden = true // hide count when we havent added anything
+        header.routeButton.addTarget(self, action: #selector(routePressed), for: .touchUpInside)
+//        header.checkpointCountButton.isHidden = true // hide count when we havent added anything
         
         view.layer.cornerRadius = 10
         view.layer.masksToBounds = true
@@ -78,8 +80,11 @@ class SearchViewController: UIViewController,
         tableView.isEditing = false // CHANGE THIS LINE WHEN YOU WANT TO ALLOW REORDERING BY DEFAULT
         self.tableView.tableFooterView = UIView(frame: .zero)
     }
-
     
+    @objc func routePressed() {
+        delegate?.routePressed()
+    }
+
     func endEditing() {
         header.searchBar.resignFirstResponder()
     }
@@ -119,7 +124,7 @@ class SearchViewController: UIViewController,
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         if section == 0 {
-            return nil // no title for search results
+            return searchResults.isEmpty ? nil : "Search Results"
         } else {
             return PathFinder.shared.destinations.isEmpty ? nil : "Added Checkpoints"
         }
@@ -151,7 +156,10 @@ class SearchViewController: UIViewController,
             markPrimaryAndSecondaryLocationLabels(mapItem: mapItem, mainString: &locationString, detailString: &detailString)
             cell.checkpointNameLabel.text = locationString!
             cell.checkpointDetailLabel.text = detailString!
-
+            cell.isCurrentLocation = mapItem == PathFinder.shared.firstRecordedCurrentLocation
+            cell.isStartLocation = mapItem == PathFinder.shared.startLocationItem
+            assert(PathFinder.shared.startLocationItem != nil) // should not be nil as long as we have one checkpoint
+            
 //            print("> mapitem.name \(mapItem.name ?? "NIL")")
 //            print("> mapitem.placemark \(String(describing: mapItem.placemark))")
 //            print("> mapitem.placemark.title \(mapItem.placemark.title ?? "nil")")

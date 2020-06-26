@@ -16,7 +16,7 @@ protocol LocationsDelegate {
     func shouldEndCheckpointPreview()
     func manualPinPlaced(for mapItem: MKMapItem) // for long press to drop pin gesture
     func focusOnMapItem(_ mapItem: MKMapItem)
-    func addCheckpointToPath(mapItem: MKMapItem)
+    func addCheckpointToPath(mapItem: MKMapItem, focus: Bool)
     func removeCheckpointFromPath(mapItem: MKMapItem)
 }
 
@@ -27,7 +27,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     
     var searchResults = [MKMapItem]()
     var delegate: LocationsDelegate?
-    
+        
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -182,7 +182,6 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
 //                } else {
 //                    offsetCoord.latitude += 0.007
 //                }
-//
 //                let region = MKCoordinateRegion(center: offsetCoord, span: span)
 //                mapView.setRegion(region, animated: true)
 //            }
@@ -202,6 +201,20 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
 
             let region = MKCoordinateRegion(center: offsetCoord, span: span)
             mapView.setRegion(region, animated: true)
+            
+            // only do this once. Warning: if user moves, the default start position wont move with them
+            PathFinder.shared.computeMapItem(for: userLocation.coordinate) { (currentMapItem) in
+                print("updating current location mapitem")
+                if let sureItem = currentMapItem {
+                    PathFinder.shared.firstRecordedCurrentLocation = sureItem
+                    if PathFinder.shared.destinations.isEmpty {
+                        print("adding pin and destination for current location")
+                        self.delegate?.addCheckpointToPath(mapItem: sureItem, focus: false)
+                    }
+                } else {
+                    print("error: couldnt figure out map item for the current location")
+                }
+            }
         }
     }
     

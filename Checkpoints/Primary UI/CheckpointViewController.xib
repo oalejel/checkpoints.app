@@ -14,6 +14,7 @@
                 <outlet property="addressLabel" destination="wtT-Y9-JU5" id="uHc-qj-AzG"/>
                 <outlet property="closeButton" destination="WKi-yT-ZOO" id="HHK-Iz-fu8"/>
                 <outlet property="distanceLabel" destination="DFw-A0-GaL" id="fJl-BU-t44"/>
+                <outlet property="makeStartButton" destination="odM-od-roY" id="a9g-cX-AVX"/>
                 <outlet property="mapFocusButton" destination="kci-35-Jmz" id="qbs-Sq-MKI"/>
                 <outlet property="nameLabel" destination="2wT-x8-r6M" id="l4H-SW-eiN"/>
                 <outlet property="removeButton" destination="Mfv-nE-5eC" id="Ypu-h2-e5O"/>
@@ -60,20 +61,39 @@
                                 <action selector="addCheckpointPressed:" destination="-1" eventType="touchUpInside" id="wAi-19-4pM"/>
                             </connections>
                         </button>
-                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Mfv-nE-5eC">
+                        <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" alignment="top" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="xaZ-1L-JkE">
                             <rect key="frame" x="0.0" y="74" width="382" height="58"/>
-                            <color key="backgroundColor" systemColor="systemRedColor" red="1" green="0.23137254900000001" blue="0.18823529410000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                            <constraints>
-                                <constraint firstAttribute="height" constant="58" id="DGR-e3-IdZ"/>
-                            </constraints>
-                            <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
-                            <state key="normal" title="Remove Checkpoint">
-                                <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            </state>
-                            <connections>
-                                <action selector="removeCheckpointPressed:" destination="-1" eventType="touchUpInside" id="MfU-Ab-SAZ"/>
-                            </connections>
-                        </button>
+                            <subviews>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Mfv-nE-5eC">
+                                    <rect key="frame" x="0.0" y="0.0" width="183" height="58"/>
+                                    <color key="backgroundColor" systemColor="systemRedColor" red="1" green="0.23137254900000001" blue="0.18823529410000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <constraints>
+                                        <constraint firstAttribute="height" constant="58" id="DGR-e3-IdZ"/>
+                                    </constraints>
+                                    <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                    <state key="normal" title="Remove">
+                                        <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                    </state>
+                                    <connections>
+                                        <action selector="removeCheckpointPressed:" destination="-1" eventType="touchUpInside" id="MfU-Ab-SAZ"/>
+                                    </connections>
+                                </button>
+                                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="odM-od-roY">
+                                    <rect key="frame" x="199" y="0.0" width="183" height="58"/>
+                                    <color key="backgroundColor" systemColor="systemGray4Color" red="0.81960784310000001" green="0.81960784310000001" blue="0.83921568629999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                    <constraints>
+                                        <constraint firstAttribute="height" constant="58" id="DGv-5T-0ab"/>
+                                    </constraints>
+                                    <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
+                                    <state key="normal" title="Start Here">
+                                        <color key="titleColor" cocoaTouchSystemColor="darkTextColor"/>
+                                    </state>
+                                    <connections>
+                                        <action selector="makeStartPressed:" destination="-1" eventType="touchUpInside" id="VKJ-0O-6Mq"/>
+                                    </connections>
+                                </button>
+                            </subviews>
+                        </stackView>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="fillProportionally" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="zKg-Mh-iF9">
                             <rect key="frame" x="0.0" y="148" width="382" height="61"/>
                             <subviews>
@@ -132,8 +152,8 @@
                     </subviews>
                     <constraints>
                         <constraint firstItem="iv0-G3-nSq" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="Ntr-z2-XeT"/>
+                        <constraint firstItem="xaZ-1L-JkE" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="PcN-LR-NPv"/>
                         <constraint firstItem="kci-35-Jmz" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="diZ-gE-STF"/>
-                        <constraint firstItem="Mfv-nE-5eC" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="f4b-lt-iFG"/>
                         <constraint firstItem="zKg-Mh-iF9" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="laC-Uo-Eac"/>
                         <constraint firstItem="YCE-p8-BIc" firstAttribute="width" secondItem="OCq-aq-0KY" secondAttribute="width" id="qKK-Go-x4h"/>
                     </constraints>

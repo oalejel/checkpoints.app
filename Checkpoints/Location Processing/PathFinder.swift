@@ -20,13 +20,15 @@ class PathFinder {
     static let shared = PathFinder() // shared singleton
     var locationManager = CLLocationManager()
     
+    var startLocationItem: MKMapItem?
+    var firstRecordedCurrentLocation: MKMapItem?
+    
     private(set) var destinations: [MKMapItem] = []
     private(set) var destIntermediateIndices: [Int] = [] // stores indexes that index into destinations, so that `destinations` never has to change ordering (even after delete)
     
     private var bestPath: [Int] = []
     private var bestPathDistance = Double.infinity
-    let destinationRequestSemaphore = DispatchSemaphore(value: 1)
-    
+    private let destinationRequestSemaphore = DispatchSemaphore(value: 1)
     private var distanceMatrix = [[Double]]() // distances in meters
     /*
         Distance Matrix storage format
@@ -96,49 +98,18 @@ class PathFinder {
          
     private func reorganizeDistanceMatrix<T>(from _currentIndex: Int, to _otherIndex: Int, matrix: inout [[T]]) {
         // example: 3 -> 5 takes index 3 to 5
-        // this would move the 3 entries in index 3 to the place of index 5, shifting 5 down to 4
-        // index 5 (formerly items of index 3) need two entries to be adjusted to the proper length
-        // this means that we need to move the entry at index 3 of the entries that we surpassed and append them to index 5's array of 3 entries
+        // instead of moving the entries in the adjacency matrix (filled in triangle form), we simply modify an intermediate indexing matrix
+        // that is accessed when we care about translating between what is displayed to the user and what the pathfinder holds info for
         
+        // note: probably a good idea to do everything based on the intermediate index, since that makes it possible to keep the "start"
+        // location in the hamiltonian cycle as the first (index 0 intermediate) row in the table
         
-        // means that i want everything that was at index 3 to be represented as a 5, and 4 and 5 must now be represented by indices 3 and 4
-        /*
-            []
-            [1-0]
-            [2-0, 2-1]
-            [3-0, 3-1, 3-2]
-            [4-0, 4-1, 4-2, 4-3]
-            -> move 2 to 4 (make c take the place of e)
-         representation
-            [] (0:a, 1:b, 2:c, 3:d, 4:e)
-            [b-a]
-            [c-a, c-b]
-            [d-a, d-b, d-c]
-            [e-a, e-b, e-c, e-d]
-         -> final
-         0->0 a[] (0:a, 1:b, 2:c, 3:d, 4:e)
-         1->1 b[b-a]
-         4->3 e[e-a, e-b] * moved this row from 4th index to 2nd index
-         2->4 c[c-a, c-b, e-c] * placed entry in source row at `currentIndex` at end of the next row
-         3->5 d[d-a, d-b, d-c, e-d] * placed the 1 + `currentIndex` entry at end of this row
-        */
         assert(_currentIndex < distanceMatrix.count)
         assert(_otherIndex < distanceMatrix.count)
         if _currentIndex == _otherIndex { return }
-        
-        // garbage incorrect code:
-//        // for consistency, make currentIndex < otherIndex
-//        let currentIndex = min(_currentIndex, _otherIndex)
-//        let otherIndex = max(_currentIndex, _otherIndex)
-        
-//        let movingRow = matrix[currentIndex]
-//        matrix.remove(at: currentIndex)
-//        matrix.insert(Array(movingRow[0..<currentIndex]), at: otherIndex)
-//
-//        // copy entries from back of moving row to
-//        for transplantSourceIndex in currentIndex..<movingRow.count {
-//            matrix[transplantSourceIndex + 1].append(movingRow[transplantSourceIndex])
-//        }
+        let currentValue = destIntermediateIndices[_currentIndex]
+        destIntermediateIndices.remove(at: _currentIndex)
+        destIntermediateIndices.insert(currentValue, at: _otherIndex)
     }
     
     // add destination and precalculate distances with other locations
@@ -202,6 +173,14 @@ class PathFinder {
             distanceMatrix[i].remove(at: destIntermediateIndices[index]) // index..<count rows have relevant entries
         }
         destIntermediateIndices.remove(at: index)
+        // lastly, decrement all following entries of intermediate indexer, as whatever used to have index + i now has index + i - 1
+        
+        for i in (0..<destIntermediateIndices.count) {
+            if destIntermediateIndices[i] >= index {
+                destIntermediateIndices[i] -= 1
+            }
+        }
+        
         self.destinationRequestSemaphore.signal()
         print("signal from removedest")
     }
