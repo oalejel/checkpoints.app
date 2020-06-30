@@ -23,7 +23,7 @@ protocol OverlayContainerDelegate {
 }
 
 enum UserState {
-    case Searching, PreviewCheckpoint
+    case Searching, PreviewCheckpoint, ConfiguringRoute
 }
 
 class MainViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
@@ -35,9 +35,11 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
     private let searchViewController = SearchViewController(showsCloseAction: false)
     private let mapsViewController = MapsViewController()
     
-    
-    
-    var state: UserState = .Searching
+    var state: UserState = .Searching {
+        didSet {
+            overlayController.invalidateNotchHeights() // trigger a height limit correction
+        }
+    }
     
     enum OverlayNotch: Int, CaseIterable {
         case minimum, medium, maximum
@@ -83,13 +85,9 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
 
 extension MainViewController: OverlayNavigationViewControllerDelegate {
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
-        
-        if state == .Searching {
-            
-        } else if state == .PreviewCheckpoint {
-//            if let cvc = viewController as? CheckpointViewController {
-//                
-//            }
+
+        if viewController is SearchViewController {
+            state = .Searching
         }
     }
 }
@@ -98,7 +96,7 @@ extension MainViewController: SearchViewControllerDelegate {
     
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
         let alreadyAdded = PathFinder.shared.destinations.contains(searchViewController.selectedMapItem!)
-        state = .PreviewCheckpoint
+        
         if alreadyAdded {
             if let existingAnnotation = mapsViewController.mapView.annotations.first(where: { ($0 as? CheckpointAnnotation)?.mapItem == searchViewController.selectedMapItem }) {
                 mapsViewController.mapView.selectAnnotation(existingAnnotation, animated: true)
@@ -111,6 +109,7 @@ extension MainViewController: SearchViewControllerDelegate {
             overlayNavigationController.push(cvc, animated: true)
             mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
         }
+        state = .PreviewCheckpoint
     }
     
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
@@ -124,6 +123,7 @@ extension MainViewController: SearchViewControllerDelegate {
     func routePressed() {
         let rcv = RouteConfigController(nibName: nil, bundle: nil)
         overlayNavigationController.push(rcv, animated: true)
+        state = .ConfiguringRoute
     }
 }
 
@@ -169,7 +169,7 @@ extension MainViewController: LocationsDelegate {
     }
     
     func refreshCheckpointsButton() {
-        if PathFinder.shared.destinations.count > 0 {
+        if PathFinder.shared.destinations.count > 1 {
             searchViewController.header.routeButton.isHidden = false
         } else {
             searchViewController.header.routeButton.isHidden = true
@@ -238,18 +238,34 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
                                         heightForNotchAt index: Int,
                                         availableSpace: CGFloat) -> CGFloat {
-        let notch = OverlayNotch.allCases[index]
-        return notchHeight(for: notch, availableSpace: availableSpace)
+        switch state {
+        case .Searching:
+            let notch = OverlayNotch.allCases[index]
+            return notchHeight(for: notch, availableSpace: availableSpace)
+        case .PreviewCheckpoint:
+//            let x = overlayNavigationController.topViewController!.view
+            return overlayNavigationController.topViewController!.view.frame.size.height - 224 // TODO: fix this for all screens
+            
+//            let lowestView = overlayNavigationController.topViewController!.view.subviews.reduce(UIView()) { (res, v) -> UIView in
+//                return (v.frame.origin.y > res.frame.origin.y) ? v : res
+//            }
+//            let max2 = lowestView.frame.size.height + lowestView.frame.origin.y + 8
+//            return max2
+//            let notch = OverlayNotch.allCases[index]
+//             notchHeight(for: notch, availableSpace: availableSpace)
+        case .ConfiguringRoute:
+            return overlayNavigationController.topViewController!.view.frame.size.height - 32
+        }
     }
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
                                         scrollViewDrivingOverlay overlayViewController: UIViewController) -> UIScrollView? {
-        if state == .Searching {
+        switch state{
+        case .Searching:
             return searchViewController.tableView
-        } else if state == .PreviewCheckpoint {
-//            if let scrollView = (navigationController?.topViewController as? CheckpointViewController)?.scrollView {
-//                return scrollView
-//            }
+        case .PreviewCheckpoint:
+            return nil
+        case .ConfiguringRoute:
             return nil
         }
         
@@ -271,6 +287,8 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
 //            let convertedPoint = coordinateSpace.convert(point, to: vc.view)
 //            let yes = vc.view.bounds.contains(convertedPoint)
 //            return yes
+            return true
+        case .ConfiguringRoute:
             return true
         }
     }

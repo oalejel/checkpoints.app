@@ -24,26 +24,20 @@
                             <constraint firstAttribute="width" constant="2" id="sSU-RY-A9D"/>
                         </constraints>
                     </view>
-                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="252" text="1" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="37x-oA-Nr9">
-                        <rect key="frame" x="8" y="17.5" width="8" height="20.5"/>
-                        <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
-                        <color key="textColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                        <nil key="highlightedColor"/>
-                    </label>
                     <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="top" translatesAutoresizingMaskIntoConstraints="NO" id="TfF-4D-If4">
-                        <rect key="frame" x="32" y="8" width="272" height="39"/>
+                        <rect key="frame" x="10" y="8" width="294" height="39"/>
                         <subviews>
                             <stackView opaque="NO" contentMode="scaleToFill" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="ymG-BQ-q4s">
                                 <rect key="frame" x="0.0" y="0.0" width="0.0" height="20.5"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" text="Apple Park" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="5Z0-zF-zgr">
-                                        <rect key="frame" x="0.0" y="0.0" width="153.5" height="20.5"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="175.5" height="20.5"/>
                                         <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
                                         <nil key="textColor"/>
                                         <nil key="highlightedColor"/>
                                     </label>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Start Location" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Kci-dz-o1Y">
-                                        <rect key="frame" x="161.5" y="0.0" width="110.5" height="20.5"/>
+                                        <rect key="frame" x="183.5" y="0.0" width="110.5" height="20.5"/>
                                         <fontDescription key="fontDescription" type="system" weight="medium" pointSize="17"/>
                                         <color key="textColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         <nil key="highlightedColor"/>
@@ -65,14 +59,12 @@
                 <constraints>
                     <constraint firstAttribute="trailing" secondItem="TfF-4D-If4" secondAttribute="trailing" constant="16" id="2Cg-H6-qlN"/>
                     <constraint firstAttribute="bottom" secondItem="TfF-4D-If4" secondAttribute="bottom" constant="8" id="Ami-4m-DXb"/>
-                    <constraint firstItem="ymG-BQ-q4s" firstAttribute="leading" secondItem="37x-oA-Nr9" secondAttribute="trailing" constant="16" id="Cah-xh-wCh"/>
                     <constraint firstItem="TfF-4D-If4" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="HU3-RB-po5"/>
+                    <constraint firstItem="TfF-4D-If4" firstAttribute="leading" secondItem="39Q-Of-otB" secondAttribute="trailing" constant="8" id="OTn-bG-EsK"/>
                     <constraint firstItem="39Q-Of-otB" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" id="OYF-TH-9XF"/>
                     <constraint firstItem="TfF-4D-If4" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="8" id="SzN-r5-tio"/>
                     <constraint firstAttribute="trailing" secondItem="ymG-BQ-q4s" secondAttribute="trailing" constant="8" id="VMD-fD-4cS"/>
-                    <constraint firstItem="37x-oA-Nr9" firstAttribute="centerY" secondItem="H2p-sc-9uM" secondAttribute="centerY" id="bMT-mX-v27"/>
                     <constraint firstAttribute="bottom" secondItem="39Q-Of-otB" secondAttribute="bottom" id="eW1-lM-jeD"/>
-                    <constraint firstItem="37x-oA-Nr9" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="8" id="j1e-L1-cAe"/>
                     <constraint firstItem="39Q-Of-otB" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" id="j82-gi-W3l"/>
                 </constraints>
             </tableViewCellContentView>

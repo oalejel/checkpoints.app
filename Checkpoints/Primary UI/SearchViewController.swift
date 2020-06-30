@@ -126,7 +126,13 @@ class SearchViewController: UIViewController,
         if section == 0 {
             return searchResults.isEmpty ? nil : "Search Results"
         } else {
-            return PathFinder.shared.destinations.isEmpty ? nil : "Added Checkpoints"
+            if PathFinder.shared.destinations.isEmpty {
+                return nil
+            } else if PathFinder.shared.destinations.count == 1 {
+                return "1 checkpoint"
+            } else {
+                return "\(PathFinder.shared.destIntermediateIndices.count) checkpoints"
+            }
         }
     }
 

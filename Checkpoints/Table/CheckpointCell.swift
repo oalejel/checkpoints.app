@@ -13,7 +13,6 @@ class CheckpointCell: UITableViewCell {
     @IBOutlet weak var checkpointNameLabel: UILabel!
     @IBOutlet weak var checkpointDetailLabel: UILabel!
     @IBOutlet weak var isStartLocationLabel: UILabel!
-    
     @IBOutlet weak var accentView: UIView!
     
     var isStartLocation = false {
@@ -25,7 +24,7 @@ class CheckpointCell: UITableViewCell {
     var isCurrentLocation = false {
         didSet {
             if isCurrentLocation { // replace current string
-                
+                accentView.isHidden = false
                 let imageAttachment = NSTextAttachment()
                 if #available(iOS 13.0, *) {
                     imageAttachment.image = UIImage(systemName: "location.fill")?.withTintColor(.systemBlue)
@@ -39,6 +38,7 @@ class CheckpointCell: UITableViewCell {
 
                 checkpointNameLabel.textColor = .systemBlue
             } else {
+                accentView.isHidden = true // consider basing accent color off of distance from current location
                 checkpointNameLabel.textColor = .black
             }
         }

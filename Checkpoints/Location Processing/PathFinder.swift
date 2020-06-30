@@ -429,6 +429,55 @@ class PathFinder {
         }
     }
     
+    func computeCoordinateBasedMST(coordinates: [CLLocationCoordinate2D]) -> [Int] {
+        var localPrimData = [PrimDatum]()
+        localPrimData.reserveCapacity(coordinates.count) // wont ever need more than this amount
+        while localPrimData.count < coordinates.count { // most time optimal to keep equal to size of permutation
+            localPrimData.append(PrimDatum())
+        }
+        
+        var numVisited = 1
+        var currentVertex = 0
+        let mstCount = coordinates.count
+        var mstWeight = 0.0
+        
+        for i in 0..<mstCount { // reset entries we care about
+            localPrimData[i].visited = false
+            localPrimData[i].parentIndex = -1
+            localPrimData[i].minimalWeight = Double.infinity
+        }
+                
+        while numVisited < mstCount {
+            // minimize weights of newly available edges
+            for i in 0..<mstCount {
+                if localPrimData[i].visited { continue }
+                // using degrees gives a distance approximation.
+                let dist = sqrt(pow(coordinates[i].latitude - coordinates[currentVertex].latitude, 2) + pow(coordinates[i].longitude - coordinates[currentVertex].longitude, 2))
+                if dist < localPrimData[i].minimalWeight {
+                    localPrimData[i].minimalWeight = dist
+                    localPrimData[i].parentIndex = currentVertex
+                }
+            }
+            
+            // visit next unvisited vertex with lowest edge weight
+            var minUnvisitedWeight = Double.infinity
+            for v in 1..<mstCount {
+                if !localPrimData[v].visited {
+                    if localPrimData[v].minimalWeight < minUnvisitedWeight {
+                        currentVertex = v
+                        minUnvisitedWeight = localPrimData[v].minimalWeight
+                    }
+                }
+            }
+            
+            mstWeight += localPrimData[currentVertex].minimalWeight
+            localPrimData[currentVertex].visited = true
+            numVisited += 1
+        }
+        
+        return localPrimData.map { $0.parentIndex }
+    }
+    
     // tell whether adding the count - permLength nodes can possibly produce an optimal path
     private func promising(_ permLength: Int, _ pathDistance: Double) -> Bool {
         // compute MST on remaining vertices

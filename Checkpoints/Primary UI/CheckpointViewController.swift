@@ -27,6 +27,8 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var distanceLabel: UILabel!
     @IBOutlet weak var makeStartButton: UIButton!
     
+    @IBOutlet weak var existingCheckpointButtonsStack: UIStackView!
+    
     var mapItem: MKMapItem
     var delegate: LocationsDelegate?
     var checkpointAlreadyAdded: Bool
@@ -77,17 +79,14 @@ class CheckpointViewController: UIViewController {
         
         if checkpointAlreadyAdded {
             addButton.isHidden = true
-            removeButton.isHidden = false
-            makeStartButton.isHidden = false
+            existingCheckpointButtonsStack.isHidden = false
         } else {
             addButton.isHidden = false
-            removeButton.isHidden = true
-            makeStartButton.isHidden = true
+            existingCheckpointButtonsStack.isHidden = true
         }
     }
 
     @IBAction func closePressed(_ sender: UIButton) {
-//        dismiss(animated: true, completion: nil)
         delegate?.shouldEndCheckpointPreview()
         navigationController?.popViewController(animated: true)
     }

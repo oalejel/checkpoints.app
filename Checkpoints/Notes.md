@@ -1,5 +1,10 @@
 #  Notes
 
+to consider
+- may want to update "current location" default checkpoint to show that its no longer correct if the user moves. this requires repeatedly geouncoding a location as long as the coordinate is at least some threshold number of meters away from the last current location, in order to either update teh cell's address, or mark the originally added one as unfresh 
+- consider making accent on left of checkpoint cell be based on a temperature color corresponding to distance from current location
+
+
 ## App story - group of travelers 
 Volunteer group would like to deliver grocies to a number of addresses. The organizer imports a csv file of addresses, sets the number of volunteers in the app, and marks the common starting location. The app then processes optimal ways to cluster nodes in such a way that the total drive distance for volunteers is acceptable. The app shows a map overlay depicting each of the paths taken in a different color, 
 
