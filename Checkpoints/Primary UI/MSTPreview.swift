@@ -10,8 +10,8 @@ import UIKit
 import CoreLocation
 
 class MSTPreview: UIView {
-    private var parentIndices: [Int]!
-    private var coordinates: [CLLocationCoordinate2D]!
+    var parentIndices: [Int]!
+    var coordinates: [CLLocationCoordinate2D]!
     private var fractionalPositions: [(CGFloat, CGFloat)]!
     private var circleRadius: CGFloat = 1 // adjusted based on coordinate count
     
@@ -79,6 +79,7 @@ class MSTPreview: UIView {
         layer.cornerRadius = 10
         layer.borderWidth = 0.5
         layer.borderColor = UIColor.lightGray.cgColor
+        layer.masksToBounds = true
     }
     
     required init?(coder: NSCoder) {

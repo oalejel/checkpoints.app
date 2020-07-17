@@ -20,13 +20,22 @@ class BackdropViewController: UIViewController {
 protocol OverlayContainerDelegate {
     func minimizeOverlay()
     func expandOverlay()
+    func getOverlayHeight() -> CGFloat
+}
+
+protocol HeightAdjustmentDelegate {
+    func didChangeHeight(height: CGFloat)
 }
 
 enum UserState {
-    case Searching, PreviewCheckpoint, ConfiguringRoute
+    case Searching, PreviewCheckpoint, ConfiguringRoute, CustomHeight(CGFloat)
 }
 
 class MainViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
+    
+    func getOverlayHeight() -> CGFloat {
+        return notchHeight(for: .minimum, availableSpace: overlayController.availableSpace)
+    }
     
     let overlayController = OverlayContainerViewController(style: .expandableHeight)
     private let overlayNavigationController = OverlayNavigationViewController()
@@ -66,7 +75,6 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
         overlayNavigationController.view.layer.shadowRadius = 9
         overlayNavigationController.view.layer.shadowOffset = .init(width: 0, height: 0)
 
-        
         overlayNavigationController.push(searchViewController, animated: true)
         addChild(overlayController, in: view)
     }
@@ -95,7 +103,7 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 extension MainViewController: SearchViewControllerDelegate {
     
     func searchViewControllerDidSelectRow(_ searchViewController: SearchViewController) {
-        let alreadyAdded = PathFinder.shared.destinations.contains(searchViewController.selectedMapItem!)
+        let alreadyAdded = PathFinder.shared.destinationCollection.contains(searchViewController.selectedMapItem!)
         
         if alreadyAdded {
             if let existingAnnotation = mapsViewController.mapView.annotations.first(where: { ($0 as? CheckpointAnnotation)?.mapItem == searchViewController.selectedMapItem }) {
@@ -124,6 +132,9 @@ extension MainViewController: SearchViewControllerDelegate {
         let rcv = RouteConfigController(nibName: nil, bundle: nil)
         overlayNavigationController.push(rcv, animated: true)
         state = .ConfiguringRoute
+        
+        // fit all annotations in mapview
+        mapsViewController.previewSpanningTreeRoute()
     }
 }
 
@@ -135,32 +146,30 @@ extension MainViewController: LocationsDelegate {
     
     func addCheckpointToPath(mapItem: MKMapItem, focus: Bool) {
         PathFinder.shared.addDestination(mapItem: mapItem)
+        if PathFinder.shared.destinationCollection.count == 0 {
+            PathFinder.shared.startLocationItem = mapItem // set to first location as default
+        }
+        
         searchViewController.clearEditing(refreshAddedCheckpoints: true)
         
         mapsViewController.savePin(for: mapItem, focus: focus)
         overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
         
         refreshCheckpointsButton()
-        
-        if PathFinder.shared.destinations.count == 1 {
-            PathFinder.shared.startLocationItem = mapItem // set to first location as default
-        }
     }
     
     func removeCheckpointFromPath(mapItem: MKMapItem) {
-        guard let removeIndex = PathFinder.shared.destinations.firstIndex(of: mapItem) else {
-            fatalError("Attempted to remove checkpoint not in pathfinder")
-        }
+        let removeIndex = PathFinder.shared.destinationCollection.indexOf(mapItem)
         
         DispatchQueue.main.async {
-            self.mapsViewController.removePin(for: PathFinder.shared.destinations[removeIndex])
+            self.mapsViewController.removePin(for: PathFinder.shared.destinationCollection[removeIndex])
             PathFinder.shared.removeDestination(atIndex: removeIndex)
             self.refreshCheckpointsButton()
             
             if mapItem == PathFinder.shared.startLocationItem { // if the same as the set start location, set it to our first map item
                 PathFinder.shared.startLocationItem = nil
-                if !PathFinder.shared.destinations.isEmpty { // if we still have destinations
-                    PathFinder.shared.startLocationItem = PathFinder.shared.destinations[PathFinder.shared.destIntermediateIndices[0]]
+                if !PathFinder.shared.destinationCollection.isEmpty { // if we still have destinations
+                    PathFinder.shared.startLocationItem = PathFinder.shared.destinationCollection[0]
                 }
             }
             
@@ -168,8 +177,19 @@ extension MainViewController: LocationsDelegate {
         }
     }
     
+    func makeStart(mapItem: MKMapItem) {
+        DispatchQueue.main.async {
+            PathFinder.shared.startLocationItem = mapItem
+            self.searchViewController.tableView.reloadData()
+        }
+    }
+    
+    func isStart(mapItem: MKMapItem) -> Bool {
+        return PathFinder.shared.startLocationItem == mapItem
+    }
+    
     func refreshCheckpointsButton() {
-        if PathFinder.shared.destinations.count > 1 {
+        if PathFinder.shared.destinationCollection.count > 1 {
             searchViewController.header.routeButton.isHidden = false
         } else {
             searchViewController.header.routeButton.isHidden = true
@@ -227,6 +247,19 @@ extension MainViewController: LocationsDelegate {
     }
 }
 
+extension MainViewController: HeightAdjustmentDelegate {
+    func didChangeHeight(height: CGFloat) {
+        state = .CustomHeight(height)
+        overlayController.invalidateNotchHeights()
+    }
+}
+
+extension MainViewController: RouteConfigDelegate {
+    func cancellingRouteConfiguration() {
+        print("TODO: cleanup route configuration preview on map")
+    }
+}
+
 extension MainViewController: OverlayContainerViewControllerDelegate {
 
     // MARK: - OverlayContainerViewControllerDelegate
@@ -244,17 +277,21 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             return notchHeight(for: notch, availableSpace: availableSpace)
         case .PreviewCheckpoint:
 //            let x = overlayNavigationController.topViewController!.view
-            return overlayNavigationController.topViewController!.view.frame.size.height - 224 // TODO: fix this for all screens
-            
-//            let lowestView = overlayNavigationController.topViewController!.view.subviews.reduce(UIView()) { (res, v) -> UIView in
-//                return (v.frame.origin.y > res.frame.origin.y) ? v : res
-//            }
-//            let max2 = lowestView.frame.size.height + lowestView.frame.origin.y + 8
-//            return max2
-//            let notch = OverlayNotch.allCases[index]
-//             notchHeight(for: notch, availableSpace: availableSpace)
+            return overlayNavigationController.topViewController!.view.frame.size.height - 124 // TODO: fix this for all screens
+        case .CustomHeight(let frameHeight):
+            return frameHeight
         case .ConfiguringRoute:
-            return overlayNavigationController.topViewController!.view.frame.size.height - 32
+//            guard let overlay = containerViewController.topViewController else { return 0 }
+//            let targetWidth = containerViewController.view.bounds.width
+//            let targetSize = CGSize(width: targetWidth, height: overlay.view.frame.size.height)//UIView.layoutFittingCompressedSize.height)
+//            let computedSize = overlay.view.systemLayoutSizeFitting(
+//                targetSize,
+//                withHorizontalFittingPriority: .required,
+//                verticalFittingPriority: .fittingSizeLevel
+//            )
+//            return computedSize.height
+
+            return overlayNavigationController.topViewController!.view.frame.size.height
         }
     }
 
@@ -267,9 +304,9 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             return nil
         case .ConfiguringRoute:
             return nil
+        case .CustomHeight:
+            return nil
         }
-        
-        fatalError("should match a scrollview")
     }
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
@@ -289,6 +326,8 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
 //            return yes
             return true
         case .ConfiguringRoute:
+            return true
+        case .CustomHeight:
             return true
         }
     }

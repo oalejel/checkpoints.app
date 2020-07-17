@@ -57,7 +57,7 @@ class SearchViewController: UIViewController,
         header.routeButton.addTarget(self, action: #selector(routePressed), for: .touchUpInside)
 //        header.checkpointCountButton.isHidden = true // hide count when we havent added anything
         
-        view.layer.cornerRadius = 10
+        view.layer.cornerRadius = 26
         view.layer.masksToBounds = true
         
         view.backgroundColor = UIColor(white: 0.95, alpha: 1)
@@ -126,12 +126,12 @@ class SearchViewController: UIViewController,
         if section == 0 {
             return searchResults.isEmpty ? nil : "Search Results"
         } else {
-            if PathFinder.shared.destinations.isEmpty {
+            if PathFinder.shared.destinationCollection.isEmpty {
                 return nil
-            } else if PathFinder.shared.destinations.count == 1 {
+            } else if PathFinder.shared.destinationCollection.count == 1 {
                 return "1 checkpoint"
             } else {
-                return "\(PathFinder.shared.destIntermediateIndices.count) checkpoints"
+                return "\(PathFinder.shared.destinationCollection.count) checkpoints"
             }
         }
     }
@@ -155,7 +155,7 @@ class SearchViewController: UIViewController,
             return cell
         } else {
             let cell = (tableView.dequeueReusableCell(withIdentifier: "checkpointCell") ?? CheckpointCell(style: .default, reuseIdentifier: "checkpointCell")) as! CheckpointCell
-            let mapItem = PathFinder.shared.destinations[indexPath.row]
+            let mapItem = PathFinder.shared.destinationCollection[indexPath.row]
             
             var locationString: String?
             var detailString: String?
@@ -223,7 +223,7 @@ class SearchViewController: UIViewController,
         if section == 0 {
             return searchResults.count
         }
-        return PathFinder.shared.destinations.count
+        return PathFinder.shared.destinationCollection.count
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -237,7 +237,7 @@ class SearchViewController: UIViewController,
         } else {
             if let _ = tableView.cellForRow(at: indexPath) as? CheckpointCell {
                 // show checkpoint view controller without add button -> show remove button
-                selectedMapItem = PathFinder.shared.destinations[indexPath.row]
+                selectedMapItem = PathFinder.shared.destinationCollection[indexPath.row]
                 delegate?.searchViewControllerDidSelectRow(self)
             } else {
                 fatalError("unexpected cell class")

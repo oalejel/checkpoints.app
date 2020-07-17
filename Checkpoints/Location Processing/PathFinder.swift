@@ -10,25 +10,10 @@ import Foundation
 import MapKit
 import CoreLocation
 
-//protocol PathFinderDelegate {
-//    func completedIndividualComputation(success: Bool, path: [MKMapItem])
-//    func completedClusteredComputation(success: Bool, paths: [[MKMapItem]])
-//}
-
-class PathFinder {
-    
-    static let shared = PathFinder() // shared singleton
-    var locationManager = CLLocationManager()
-    
-    var startLocationItem: MKMapItem?
-    var firstRecordedCurrentLocation: MKMapItem?
-    
-    private(set) var destinations: [MKMapItem] = []
-    private(set) var destIntermediateIndices: [Int] = [] // stores indexes that index into destinations, so that `destinations` never has to change ordering (even after delete)
-    
-    private var bestPath: [Int] = []
-    private var bestPathDistance = Double.infinity
-    private let destinationRequestSemaphore = DispatchSemaphore(value: 1)
+// stores collection of mapitems and distances between each other
+class DestinationTracker {
+    private var orderedDestinations: [MKMapItem] = []
+    private var intermediateIndices: [Int] = []
     private var distanceMatrix = [[Double]]() // distances in meters
     /*
         Distance Matrix storage format
@@ -39,23 +24,115 @@ class PathFinder {
         ...
     */
     
-    private var permutation = [Int]()
-    
-    struct PrimDatum {
-        var visited = false
-        var parentIndex = -1
-        var minimalWeight = Double.infinity
+    var count: Int {
+        return orderedDestinations.count
     }
-    private var primData = [PrimDatum]()
     
-    // reorients distance matrix to account for change in indices
-    func moveDestination(from currentIndex: Int, to otherIndex: Int) {
-        assertReorganizeDistanceCorrectness() // (comment out later) test correctness of this crucial helper function
+    var isEmpty: Bool {
+        return orderedDestinations.isEmpty
+    }
+    
+    func contains(_ item: MKMapItem) -> Bool {
+        return orderedDestinations.contains(item)
+    }
+    
+    var unsortedDestinations: [MKMapItem] {
+        return orderedDestinations
+    }
+    
+    func removeAll() {
+        orderedDestinations.removeAll()
+        intermediateIndices.removeAll()
+        distanceMatrix.removeAll()
+    }
+    
+    subscript(index: Int) -> MKMapItem {
+        orderedDestinations[intermediateIndices[index]]
+    }
+    
+    func append(_ mapItem: MKMapItem) {
+        orderedDestinations.append(mapItem)
+        intermediateIndices.append(intermediateIndices.count)
+        distanceMatrix.append(Array(repeating: Double.infinity, count: distanceMatrix.count)) // prepare row of directions
+    }
+    
+    func longestDistance() -> Double {
+        return distanceMatrix.reduce(0.0) { biggest, row -> Double in
+            let greatestInRow = row.reduce(0.0) { res, i -> Double in
+                return res < i ? i : res
+            }
+            return biggest < greatestInRow ? greatestInRow : biggest
+        }
+    }
+    
+    func move(destinationAt index: Int, toIndex: Int) {
+        let entry = intermediateIndices[index]
+        intermediateIndices.remove(at: index)
+        intermediateIndices.insert(entry, at: toIndex)
+    }
+    
+    func indexOf(_ mapItem: MKMapItem) -> Int {
+        let innerIndex = orderedDestinations.firstIndex(of: mapItem)!
+        let userIndex = intermediateIndices.firstIndex(of: innerIndex)!
+        return userIndex
+    }
+    
+    func remove(atIndex: Int) {
+        orderedDestinations.remove(at: intermediateIndices[atIndex])
         
+        for i in ((intermediateIndices[atIndex] + 1)..<distanceMatrix.count) { // remove related entries in larger index rows
+            distanceMatrix[i].remove(at: intermediateIndices[atIndex]) // index..<count rows have relevant entries
+        }
+        distanceMatrix.remove(at: intermediateIndices[atIndex]) // then delete the main row for this index
+        intermediateIndices.remove(at: atIndex)
+        
+        // lastly, decrement all following entries of intermediate indexer, as whatever used to have index + i now has index + i - 1
+        for i in (0..<intermediateIndices.count) {
+            if intermediateIndices[i] >= atIndex {
+                intermediateIndices[i] -= 1
+            }
+        }
     }
     
-    func assertReorganizeDistanceCorrectness() {
-
+    // returns distance between destinations via user-facing indices (not based on indexing used in distance matrix)
+    func getDistance(between index1: Int, and index2: Int) -> Double {
+        if index1 == index2 { return 0.0 }
+        let i1 = intermediateIndices[index1]
+        let i2 = intermediateIndices[index2]
+        let smallIndex = min(i1, i2)
+        let bigIndex = max(i1, i2) // row indexed based on large number, since we have a triangle matrix filled out
+        assert(distanceMatrix.count > bigIndex)
+        assert(distanceMatrix[bigIndex].count > smallIndex)
+        return distanceMatrix[bigIndex][smallIndex]
+    }
+    
+    // sets distance between destinations via user-facing indices (not based on indexing used in distance matrix)
+    func setDistance(between index1: Int, and index2: Int, distance: Double) {
+        let i1 = intermediateIndices[index1]
+        let i2 = intermediateIndices[index2]
+        let smallIndex = min(i1, i2)
+        let bigIndex = max(i1, i2) // row indexed based on large number, since we have a triangle matrix filled out
+        assert(distanceMatrix.count > bigIndex)
+        assert(distanceMatrix[bigIndex].count > smallIndex)
+        distanceMatrix[bigIndex][smallIndex] = distance
+    }
+    
+    //
+    func totalDistanceAfterCheckpoint(startIndex: Int, driverIndex: Int? = nil) -> Double {
+        #warning("support mutliple drivers here")
+        if let driverIndex = driverIndex {
+            fatalError("not implemented for multiple drivers \(driverIndex)")
+        } else {
+            var dist = 0.0
+            #warning("confirm that this includes RTH")
+            for i in startIndex..<(intermediateIndices.count - 1) {
+                dist += getDistance(between: i, and: i+1)
+            }
+            return dist
+        }
+    }
+    
+    func assertsomething() {
         let testMatrix: [[(Int, Int)]] = [
             [],
             [(1, 0)],
@@ -64,93 +141,113 @@ class PathFinder {
             [(4, 0), (4, 1), (4, 2), (4, 3)],
             [(5, 0), (5, 1), (5, 2), (5, 3), (5, 4)]
         ]
-        
-        // test swapping 0 -> 5
-        var test1 = testMatrix
-        reorganizeDistanceMatrix(from: 0, to: 5, matrix: &test1)
-        /*
-         [],
-         [(1, 0)],
-         [(2, 0), (2, 1)],
-         [(3, 0), (3, 1), (3, 2)],
-         [(4, 0), (4, 1), (4, 2), (4, 3)],
-         [(5, 0), (5, 1), (5, 2), (5, 3), (5, 4)]
-         
-         [, (5, 1), (5, 2), (5, 3), (5, 4)]
-         [(1, 0), ],
-         [(2, 0), (2, 1)],
-         [(3, 0), (3, 1), (3, 2)],
-         [(4, 0), (4, 1), (4, 2), (4, 3)],
-         []
-        
-        */
-        assert(true)
-        
-        // test swapping 5 -> 0
-        
-        // test swapping 0 -> 1
-        
-        // test swapping 4 -> 3
-        
-        // test swapping 3 -> 4
-        
+
     }
-         
-    private func reorganizeDistanceMatrix<T>(from _currentIndex: Int, to _otherIndex: Int, matrix: inout [[T]]) {
-        // example: 3 -> 5 takes index 3 to 5
-        // instead of moving the entries in the adjacency matrix (filled in triangle form), we simply modify an intermediate indexing matrix
-        // that is accessed when we care about translating between what is displayed to the user and what the pathfinder holds info for
-        
-        // note: probably a good idea to do everything based on the intermediate index, since that makes it possible to keep the "start"
-        // location in the hamiltonian cycle as the first (index 0 intermediate) row in the table
-        
-        assert(_currentIndex < distanceMatrix.count)
-        assert(_otherIndex < distanceMatrix.count)
-        if _currentIndex == _otherIndex { return }
-        let currentValue = destIntermediateIndices[_currentIndex]
-        destIntermediateIndices.remove(at: _currentIndex)
-        destIntermediateIndices.insert(currentValue, at: _otherIndex)
+}
+
+class PathFinder {
+    // MARK: - Properties
+    static let shared = PathFinder() // shared singleton
+    var locationManager = CLLocationManager()
+    
+    var startLocationItem: MKMapItem? // publicly define which item the user must begin their route with
+    var firstRecordedCurrentLocation: MKMapItem? // convenient for marking where user had their "current location" marked when the app launched
+    
+    // array containing mapitems for all destinations with corresponding distances as stored in the distance matrix
+    // the order of these destinations *never* changes; instead, we change the destIntermediateIndices array to avoid having to reorganize the distance matrix
+//    private(set) var destinations: [MKMapItem] = []
+//    private(set) var destIntermediateIndices: [Int] = [] // stores indexes that index into destinations, so that `destinations` never has to change ordering (even after delete)
+    var destinationCollection = DestinationTracker()
+    
+    private var bestPath: [Int] = []
+    private var bestPathDistance = Double.infinity
+    private let destinationRequestSemaphore = DispatchSemaphore(value: 1)
+//    private var distanceMatrix = [[Double]]() // distances in meters
+    /*
+        Distance Matrix storage format
+        []
+        [1-0]
+        [2-0, 2-1]
+        [3-0, 3-1, 3-2]
+        ...
+    */
+    
+    // used to check whether its safe to proceed
+    private var incompleteJobCount = 0
+    
+    private var permutation = [Int]()
+    
+    struct PrimDatum {
+        var visited = false
+        var parentIndex = -1
+        var minimalWeight = Double.infinity
     }
+    private var primData = [PrimDatum]()
+        
+    // MARK: - Public operations
+    
+    // reorients distance matrix to account for change in indices
+    func moveDestination(from currentIndex: Int, to otherIndex: Int) {
+        destinationCollection.move(destinationAt: currentIndex, toIndex: otherIndex)
+        // TODO: recompute `lastComputedPathDistance` distance
+        assert(false)
+    }
+    
+    private func waitOnIncompleteJobs() {
+        destinationRequestSemaphore.wait()
+        while incompleteJobCount != 0 {
+            // release to allow access to these semaphores
+            print("waiting")
+            destinationRequestSemaphore.signal()
+            destinationRequestSemaphore.wait()
+        }
+        destinationRequestSemaphore.signal()
+    }
+             
     
     // add destination and precalculate distances with other locations
     func addDestination(mapItem: MKMapItem) {
         
-        destinations.append(mapItem) // may want to compute edge weights to this destination
-        destIntermediateIndices.append(destIntermediateIndices.count) // first item -> gets index 0
-        
         DispatchQueue.global(qos: .userInitiated).async {
             // no need to use mutex here, since addDestination is signaled by user interaction
-            print("waiting on sem in adddest")
+            
+            self.incompleteJobCount += 1
+            print("waiting from adddest")
             self.destinationRequestSemaphore.wait() // block a remove operation
-            print("got into add sem")
             
-            self.distanceMatrix.append([])
-            let rowIndex = self.distanceMatrix.count - 1 // hold on to this in case we get another concurrent call?
-            self.distanceMatrix[rowIndex].reserveCapacity(rowIndex)
+            self.destinationCollection.append(mapItem)
+//            self.destinations.append(mapItem) // may want to compute edge weights to this destination
+//            self.destIntermediateIndices.append(self.destIntermediateIndices.count) // first item -> gets index 0
             
+//            self.distanceMatrix.append([])
+            let rowIndex = self.destinationCollection.count - 1 // hold on to this in case we get another concurrent call?
+//            self.distanceMatrix[rowIndex].reserveCapacity(rowIndex)
+            print("about to loop on rows")
             for colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
-                assert(mapItem != self.destinations[colIndex]) // catch an old bug where same location was added
+                assert(mapItem != self.destinationCollection[colIndex]) // catch an old bug where same location was added
                 let request = MKDirections.Request()
-                request.source = self.destinations[colIndex]
+                request.source = self.destinationCollection[colIndex]
                 request.destination = mapItem
                 request.requestsAlternateRoutes = false
                 request.transportType = .automobile
                 let directions = MKDirections(request: request)
                 
                 let etaSemaphore = DispatchSemaphore(value: 0)
+                print("gonna calc eta")
                 directions.calculateETA { (etaResponse, error) in
+                    print("got eta calculation")
                     guard let etaResponse = etaResponse else {
                         print(error ?? "Unknown error trying to compute ETA")
-                        // TODO: tell someone that this failed...
+                        // TODO: tell someone that this failed and rollback changes....
                         return
                     }
-                    assert(self.distanceMatrix[rowIndex].count == colIndex)
-                    self.distanceMatrix[rowIndex].append(etaResponse.distance)
+//                    assert(self.destinationCollection[rowIndex].count == colIndex)
+                    self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: etaResponse.distance)
                     etaSemaphore.signal() // indicate that we can move on to next iteration
                 }
                 etaSemaphore.wait() // wait on eta to finish adding distance to matrix
             }
-            print(self.distanceMatrix)
+            self.incompleteJobCount -= 1
             self.destinationRequestSemaphore.signal() // allow others to join
             print("signaled from adddest")
             
@@ -164,34 +261,24 @@ class PathFinder {
     // index based on intermediate indexer
     func removeDestination(atIndex index: Int) {
         print("wait from removedest")
+        incompleteJobCount += 1
         self.destinationRequestSemaphore.wait()
         print("got into remove sem")
-        destinations.remove(at: destIntermediateIndices[index])
-        distanceMatrix.remove(at: destIntermediateIndices[index])
-        
-        for i in (index..<distanceMatrix.count) {
-            distanceMatrix[i].remove(at: destIntermediateIndices[index]) // index..<count rows have relevant entries
-        }
-        destIntermediateIndices.remove(at: index)
-        // lastly, decrement all following entries of intermediate indexer, as whatever used to have index + i now has index + i - 1
-        
-        for i in (0..<destIntermediateIndices.count) {
-            if destIntermediateIndices[i] >= index {
-                destIntermediateIndices[i] -= 1
-            }
-        }
-        
+        destinationCollection.remove(atIndex: index)
+        incompleteJobCount -= 1
         self.destinationRequestSemaphore.signal()
-        print("signal from removedest")
     }
     
     // warning: may want to add a progress update closure to give updates to the progress of the computation
     func computeIndividualOptimalPath(completion: (([MKMapItem]) -> Void)) {
-        assert(destinations.count > 1)
+        assert(destinationCollection.count > 1)
         computePathUpperBound()
+        print("starting with path upper bound of weight: ", bestPathDistance)
         // WARNING: rotate bestPath so that index 0 has node 0 (start node)
         permutation = bestPath // start with best one so far to help search time
         generatePermutations(permLength: 1, growingDistance: 0.0)
+        
+        print("best permutation: ", bestPath)
     }
     
     // Note: in this case, the start destination must also be the end destination (for now)
@@ -199,7 +286,7 @@ class PathFinder {
     //      the start location (destinations[0]). This should be optimal.
     func computeClusteredOptimalPath(numTravelers: Int,
                                      completion: (([[MKMapItem]]) -> Void)) {
-        assert(numTravelers > destinations.count)
+        assert(numTravelers > destinationCollection.count)
         computeIndividualOptimalPath { (path) in
             
             /*
@@ -233,7 +320,6 @@ class PathFinder {
 
             
             
-            
             // WARNING: made the realization that a split TSP might not be optimal... subpaths in TSP are optimized and primed for future approach to points in other "clusters". The closest way to connect 7 points in a simple path might not include the best way to connect the first 4 of those points
             
             // we expect distance traveled between points to be about the same, so remove points returning to home to compute avg
@@ -241,7 +327,8 @@ class PathFinder {
             assert(bestPath.last! == 0)
             let avgDistGoal =
                 (bestPathDistance
-                - (distance(bestPath[0], bestPath[1]) + distance(bestPath[bestPath.count - 2], bestPath.last!)))
+                - (destinationCollection.getDistance(between: bestPath[0], and: bestPath[1]) +
+                    destinationCollection.getDistance(between: bestPath[bestPath.count - 2], and: bestPath.last!)))
                 / Double(numTravelers)
             
             var pathSlices = [(Int, Int)]()
@@ -252,7 +339,7 @@ class PathFinder {
             for i in 1..<bestPath.count-1 { // excludes connect from start to 2nd vertex and penultimate back to start
                 let v1IndexIndex = i
                 let v2IndexIndex = i + 1 // should never equal .count or .count - 1
-                distanceAccumulator += distance(bestPath[v1IndexIndex], bestPath[v2IndexIndex])
+                distanceAccumulator += destinationCollection.getDistance(between: bestPath[v1IndexIndex], and: bestPath[v2IndexIndex])
 //                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v1 to start location
 //                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v2 to start location
                 
@@ -277,10 +364,11 @@ class PathFinder {
             
             // step 2: attempt to split path by cutting most distance points
             let sortedIndices = bestPath[1..<bestPath.count-1].sorted { (a, b) -> Bool in
-                return distance(0, a) > distance(0, b) // descending by distance from start
+                // descending by distance from start
+                return destinationCollection.getDistance(between: 0, and: a) > destinationCollection.getDistance(between: 0, and: b)
             }
             let verticesCutSet = Set(sortedIndices[..<numTravelers])
-            assert(distance(sortedIndices[0], 0) > distance(sortedIndices[1], 0))
+            assert(destinationCollection.getDistance(between: sortedIndices[0], and: 0) > destinationCollection.getDistance(between: sortedIndices[1], and: 0))
             
             // step 2.2: find places to split to generate alternative path
             var alternativeSubpathSlices = [[Int]]()
@@ -289,7 +377,7 @@ class PathFinder {
                     if let prevNodeIndex = alternativeSubpathSlices.last?.last, i + 1 <= bestPath.count - 2 {
                         // case where we have a previous and next node
                         let nextNodeIndex = bestPath[i+1]
-                        if distance(prevNodeIndex, bestPath[i]) < distance(bestPath[i], nextNodeIndex) {
+                        if destinationCollection.getDistance(between: prevNodeIndex, and: bestPath[i]) < destinationCollection.getDistance(between: bestPath[i], and: nextNodeIndex) {
                             // better to connect to previous node and form a new sequence
                             alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(bestPath[i])
                             alternativeSubpathSlices.append([]) // then append empty array for next node to be added to
@@ -324,9 +412,9 @@ class PathFinder {
             print(alternativeSubpathSlices)
             assert(alternativeSubpathSlices.count == numTravelers)
             assert(pathSlices.count == numTravelers)
-            assert(subpathSlices.reduce(0) { $0 + $1.count } == destinations.count,
+            assert(subpathSlices.reduce(0) { $0 + $1.count } == destinationCollection.count,
                    "incorrect destination count in pathSlices")
-            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == destinations.count,
+            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == destinationCollection.count,
                    "incorrect destination count in alternativeSubpathSlices")
 
                         
@@ -335,29 +423,29 @@ class PathFinder {
             let alternativeReconnectedSubpathLength = alternativeSubpathSlices.map { slice -> Double in
                 var sum: Double = 0.0
                 for i in 0..<slice.count - 1 {
-                    sum += distance(slice[i], slice[i+1])
+                    sum += destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
                 }
-                sum += distance(slice[0], 0)
-                sum += distance(slice.last!, 0)
+                sum += destinationCollection.getDistance(between: slice[0], and: 0)
+                sum += destinationCollection.getDistance(between: slice.last!, and: 0)
                 return sum
             }.reduce(0.0) { $0 + $1 }
             
             let reconnectedSubpathLength = subpathSlices.map { slice -> Double in
                 var sum: Double = 0.0
                 for i in 0..<slice.count - 1 {
-                    sum += distance(slice[i], slice[i+1])
+                    sum += destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
                 }
-                sum += distance(slice[0], 0)
-                sum += distance(slice.last!, 0)
+                sum += destinationCollection.getDistance(between: slice[0], and: 0)
+                sum += destinationCollection.getDistance(between: slice.last!, and: 0)
                 return sum
             }.reduce(0.0) { $0 + $1 }
             
             var subpathsOutput = [[MKMapItem]]() // should not include connections back to start (0 - ... - 0)
             // if better to take our heuristic-generated split, use it
             if alternativeReconnectedSubpathLength < reconnectedSubpathLength {
-                subpathsOutput = alternativeSubpathSlices.map { $0.map { destinations[$0] } }
+                subpathsOutput = alternativeSubpathSlices.map { $0.map { destinationCollection[$0] } }
             } else {
-                subpathsOutput = subpathSlices.map { $0.map { destinations[$0] } }
+                subpathsOutput = subpathSlices.map { $0.map { destinationCollection[$0] } }
             }
             
             // call completion handler with our mapitem subpaths
@@ -376,56 +464,70 @@ class PathFinder {
     // MARK: - Private Member Functions
     
     // uses raw indices (not based on intermediate indexer)
-    private func distance(_ a: Int, _ b: Int) -> Double {
-        if a == b { return 0.0 }
-        let large = max(a,b)
-        let small = min(a,b)
-        return distanceMatrix[large][small]
+//    private func distanceForRawIndices(_ a: Int, _ b: Int) -> Double {
+//        waitOnIncompleteJobs()
+//        if a == b { return 0.0 }
+//        let large = max(a,b)
+//        let small = min(a,b)
+//        return distanceMatrix[large][small]
+//    }
+    
+    public func distanceForUserIndices(_ a: Int, _ b: Int) -> Double {
+        waitOnIncompleteJobs() // wait since we might still be adding the index
+        return destinationCollection.getDistance(between: a, and: b)
+    }
+    
+    // meters
+    public func longestCheckpointDistance() -> Double {
+        return destinationCollection.longestDistance()
     }
     
     private func resetPriorData() {
-        distanceMatrix.removeAll()
+//        distanceMatrix.removeAll()
+        destinationCollection.removeAll()
         bestPath.removeAll()
         bestPathDistance = .infinity
     }
     
-    private func computeOptimalTour() {
-        computePathUpperBound() // updates pathUpperBound and Distance
-        
-    }
-    
     private func computePathUpperBound() {
         // TODO: make this work after proving that generatePermutations works
-        bestPath = Array(0..<destinations.count)
+        bestPath = Array(0..<destinationCollection.count)
         bestPathDistance = 0.0
-        for i in 0..<bestPath.count {
-            bestPathDistance += distance(bestPath[i], bestPath[i+1 % bestPath.count])
+        for i in 0..<(bestPath.count - 1) {
+            bestPathDistance += destinationCollection.getDistance(between: bestPath[i], and: bestPath[i + 1])
         }
+        // connect end to beginning
+        bestPathDistance += destinationCollection.getDistance(between: bestPath[0], and: bestPath[bestPath.count - 1])
     }
     
     private func generatePermutations(permLength: Int, growingDistance: Double) {
+        print("perm", permutation, " length: ", permLength, " cost: ", growingDistance)
         if growingDistance > bestPathDistance {
+            print("cutting out this permutation!")
             return
         }
         
         if permLength == permutation.count {
-            let testDistance = growingDistance + distance(0, permutation.last!)
+            let testDistance = growingDistance + destinationCollection.getDistance(between: 0, and: permutation.last!)
+            print("testing by adding length: ", testDistance)
             if testDistance < bestPathDistance {
+                print("better permutation!")
                 bestPath = permutation
                 bestPathDistance = testDistance
             }
             return
         }
         
-        if !promising(permLength, growingDistance) {
-            return
-        }
+        // TODO: test promising, though time isnt an issue for a couple destinations
+//        if !promising(permLength, growingDistance) {
+//            return
+//        }
         
         for i in permLength..<permutation.count {
-            swap(&permutation[permLength], &permutation[i])
-            let nextEdge = distance(permutation[permLength - 1], permutation[permLength])
+            permutation.swapAt(permLength, i)
+            let nextEdge = destinationCollection.getDistance(between: permLength - 1, and: permLength)
             generatePermutations(permLength: permLength + 1, growingDistance: growingDistance + nextEdge)
-            swap(&permutation[permLength], &permutation[i])
+            permutation.swapAt(permLength, i)
         }
     }
     
@@ -481,7 +583,7 @@ class PathFinder {
     // tell whether adding the count - permLength nodes can possibly produce an optimal path
     private func promising(_ permLength: Int, _ pathDistance: Double) -> Bool {
         // compute MST on remaining vertices
-        
+        if permLength >= permutation.count - 3 { return true }// TODO: make this bound larger to avoid wasting time on MST when we just have a few points
         primData.reserveCapacity(permutation.count) // wont ever need more than this amount
         while primData.count < permutation.count { // most time optimal to keep equal to size of permutation
             primData.append(PrimDatum())
@@ -502,7 +604,7 @@ class PathFinder {
             // minimize weights of newly available edges
             for i in permLength..<mstCount {
                 if primData[i].visited { continue }
-                let dist = distance(permutation[i], permutation[currentVertex])
+                let dist = destinationCollection.getDistance(between: permutation[i], and: permutation[currentVertex])
                 if dist < primData[i].minimalWeight {
                     primData[i].minimalWeight = dist
                     primData[i].parentIndex = currentVertex
@@ -531,8 +633,8 @@ class PathFinder {
         var minLeftEdge = Double.infinity
         var minRightEdge = Double.infinity
         for i in permLength..<mstCount {
-            let leftDist = distance(permutation[0], permutation[i])
-            let rightDist = distance(permutation[permLength - 1], permutation[i])
+            let leftDist = destinationCollection.getDistance(between: permutation[0], and: permutation[i])
+            let rightDist = destinationCollection.getDistance(between: permutation[permLength - 1], and: permutation[i])
             if leftDist < minLeftEdge {
                 minLeftEdge = leftDist
             }

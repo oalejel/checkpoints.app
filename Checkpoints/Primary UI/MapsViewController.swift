@@ -18,6 +18,8 @@ protocol LocationsDelegate {
     func focusOnMapItem(_ mapItem: MKMapItem)
     func addCheckpointToPath(mapItem: MKMapItem, focus: Bool)
     func removeCheckpointFromPath(mapItem: MKMapItem)
+    func makeStart(mapItem: MKMapItem)
+    func isStart(mapItem: MKMapItem) -> Bool
 }
 
 class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
@@ -154,6 +156,20 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         }
     }
     
+    func previewSpanningTreeRoute() {
+        var totalMapRect = MKMapRect.null
+        for ann in self.mapView.annotations {
+            let annotationPoint = MKMapPoint(ann.coordinate)
+            let mapRect = MKMapRect(x: annotationPoint.x, y: annotationPoint.y, width: 0.1, height: 0.1)
+            totalMapRect = totalMapRect.union(mapRect)
+        }
+        
+        let topPadding: CGFloat = 32
+        let overlayHeight = overlayContainerDelegate?.getOverlayHeight() ?? 8
+        let hPadding = max(view.bounds.size.height - (topPadding + CGFloat(totalMapRect.height)), overlayHeight + topPadding) + 32
+        mapView.setVisibleMapRect(totalMapRect, edgePadding: UIEdgeInsets(top: topPadding, left: 16, bottom: hPadding, right: 16), animated: true)
+    }
+    
     // MARK: - Mapview Delegate
     
     func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
@@ -207,7 +223,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                 print("updating current location mapitem")
                 if let sureItem = currentMapItem {
                     PathFinder.shared.firstRecordedCurrentLocation = sureItem
-                    if PathFinder.shared.destinations.isEmpty {
+                    if PathFinder.shared.destinationCollection.isEmpty {
                         print("adding pin and destination for current location")
                         self.delegate?.addCheckpointToPath(mapItem: sureItem, focus: false)
                     }

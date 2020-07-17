@@ -30,8 +30,13 @@ class CheckpointViewController: UIViewController {
     @IBOutlet weak var existingCheckpointButtonsStack: UIStackView!
     
     var mapItem: MKMapItem
-    var delegate: LocationsDelegate?
     var checkpointAlreadyAdded: Bool
+    
+    var delegate: LocationsDelegate? {
+        didSet {
+            updateSetStartButton()
+        }
+    }
     
     init(mapItem: MKMapItem, alreadyAdded: Bool) {
         self.mapItem = mapItem
@@ -47,7 +52,7 @@ class CheckpointViewController: UIViewController {
         super.viewDidLoad()
 
         // Do any additional setup after loading the view.
-        view.layer.cornerRadius = 10
+        view.layer.cornerRadius = 26
         view.layer.masksToBounds = true
 
 //        closeButton.backgroundColor = .lightGray
@@ -84,6 +89,15 @@ class CheckpointViewController: UIViewController {
             addButton.isHidden = false
             existingCheckpointButtonsStack.isHidden = true
         }
+
+        updateSetStartButton()
+    }
+    
+    func updateSetStartButton() {
+        if delegate?.isStart(mapItem: mapItem) ?? false {
+            makeStartButton?.isEnabled = true
+            makeStartButton?.isHidden = true
+        }
     }
 
     @IBAction func closePressed(_ sender: UIButton) {
@@ -106,7 +120,10 @@ class CheckpointViewController: UIViewController {
     }
     
     @IBAction func makeStartPressed(_ sender: Any) {
-        
+        delegate?.makeStart(mapItem: mapItem)
+        UIView.animate(withDuration: 0.2) {
+            self.makeStartButton.isHidden = true
+        }
     }
     
     /*
