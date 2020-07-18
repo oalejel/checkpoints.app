@@ -29,32 +29,36 @@ class RouteCell: UITableViewCell {
     private var sequenceType: RouteSequenceType = .Start {
         didSet {
             // location labels
-            if [RouteSequenceType.Complete, .Incomplete].contains(sequenceType) {
+            
+            switch sequenceType {
+            case .Complete, .Start:
                 locationLabel.textColor = .gray
                 locationLabel.font = UIFont.systemFont(ofSize: locationLabel.font.pointSize, weight: .regular)
-            } else if [RouteSequenceType.NextNonEndTarget, .NextIsEndTarget].contains(sequenceType) {
+            case .NextIsEndTarget, .NextNonEndTarget:
                 locationLabel.textColor = .systemBlue
                 locationLabel.font = UIFont.systemFont(ofSize: locationLabel.font.pointSize, weight: .medium)
-            } else {
+            default:
                 locationLabel.textColor = .black
                 locationLabel.font = UIFont.systemFont(ofSize: locationLabel.font.pointSize, weight: .regular)
+
             }
-            
+                        
             // index buttons
-            if [RouteSequenceType.Start, .Complete].contains(sequenceType) {
+            switch sequenceType {
+            case .Start, .Complete:
                 indexButton.backgroundColor = .systemBlue
                 indexButton.layer.borderColor = UIColor.systemBlue.cgColor
                 indexButton.layer.borderWidth = 2
                 indexButton.setTitleColor(.white, for: .normal)
-            } else if [RouteSequenceType.NextNonEndTarget, .NextIsEndTarget].contains(sequenceType) {
+            case .NextNonEndTarget, .NextIsEndTarget:
                 indexButton.backgroundColor = .white
                 indexButton.layer.borderColor = UIColor.systemBlue.cgColor
                 indexButton.layer.borderWidth = 2
                 indexButton.setTitleColor(.systemBlue, for: .normal)
-            } else {
+            default:
                 indexButton.backgroundColor = UIColor(white: 0.85, alpha: 1)
                 indexButton.layer.borderWidth = 0
-                indexButton.setTitleColor(.lightGray, for: .normal)
+                indexButton.setTitleColor(.gray, for: .normal)
             }
             
             // top and bottom bars
@@ -106,9 +110,11 @@ class RouteCell: UITableViewCell {
         }
     }
     
-    func setDistance(distanceInMeters: Double?, sequenceType: RouteSequenceType) {
-        self.sequenceType = sequenceType
+    func setDistance(index: Int, title: String, distanceInMeters: Double?, sequenceType: RouteSequenceType) {
         self.distanceInMeters = distanceInMeters
+        self.sequenceType = sequenceType
+        self.indexButton.setTitle("\(index + 1)", for: .normal) // let's use 1-indexing
+        self.locationLabel.text = title
     }
     
     override func awakeFromNib() {
@@ -116,20 +122,11 @@ class RouteCell: UITableViewCell {
         // Initialization code
         
         distanceButton.isUserInteractionEnabled = false
-        distanceButton.titleEdgeInsets = .init(top: 4, left: 8, bottom: 4, right: 8)
+        distanceButton.contentEdgeInsets = .init(top: 4, left: 8, bottom: 4, right: 8)
+        distanceButton.layer.cornerRadius = 4
         indexButton.isUserInteractionEnabled = false
         indexButton.titleLabel?.adjustsFontSizeToFitWidth = true
         
-//        let selectView = UIView()
-//        selectView.backgroundColor = UIColor(white: 0.9, alpha: 1)
-//        selectedBackgroundView = selectView
-//        selectedBackgroundView = nil
-        
-        // remove the small offset that the bg view gets
-        if let bgView = selectedBackgroundView {
-            bgView.frame.origin.y = 0
-            bgView.frame.size.height = floor(bgView.frame.size.height)
-        }
         clipsToBounds = true
     }
     
@@ -142,25 +139,6 @@ class RouteCell: UITableViewCell {
         }
     }
     
-    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
-        if let bgView = selectedBackgroundView {
-            bgView.frame.origin.y = 0
-            bgView.frame.size.height = floor(bgView.frame.size.height)
-        }
-        super.setHighlighted(highlighted, animated: animated)
-//        print("last check")
-        print(selectedBackgroundView?.frame)
-//        func f() {
-//            if highlighted {
-//                self.backgroundColor = .init(white: 0.85, alpha: 1)
-//            } else {
-//                self.backgroundColor = .white
-//            }
-//        }
-//        animated ? UIView.animate(withDuration: 0.1, animations: f) : f()
-    }
-    
-
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
 

@@ -77,7 +77,7 @@ class MSTPreview: UIView {
         }
         
         layer.cornerRadius = 10
-        layer.borderWidth = 0.5
+        layer.borderWidth = 1
         layer.borderColor = UIColor.lightGray.cgColor
         layer.masksToBounds = true
     }

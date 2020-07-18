@@ -472,7 +472,7 @@ class PathFinder {
 //        return distanceMatrix[large][small]
 //    }
     
-    public func distanceForUserIndices(_ a: Int, _ b: Int) -> Double {
+    public func threadSafeDistanceForUserIndices(_ a: Int, _ b: Int) -> Double {
         waitOnIncompleteJobs() // wait since we might still be adding the index
         return destinationCollection.getDistance(between: a, and: b)
     }

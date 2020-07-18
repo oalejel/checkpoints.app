@@ -67,11 +67,11 @@
                         </stackView>
                     </subviews>
                 </stackView>
-                <stackView opaque="NO" contentMode="scaleToFill" alignment="center" spacing="27" translatesAutoresizingMaskIntoConstraints="NO" id="xxD-Mk-6eA">
+                <stackView opaque="NO" contentMode="scaleToFill" alignment="center" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="xxD-Mk-6eA">
                     <rect key="frame" x="20" y="84" width="374" height="57"/>
                     <subviews>
                         <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="yUJ-9g-eIe">
-                            <rect key="frame" x="0.0" y="4" width="160" height="49"/>
+                            <rect key="frame" x="0.0" y="4" width="179" height="49"/>
                             <subviews>
                                 <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="14 stops remaining" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="4Eo-4q-EC1">
                                     <rect key="frame" x="0.0" y="0.0" width="151.5" height="20.5"/>
@@ -126,7 +126,7 @@
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="xxD-Mk-6eA" secondAttribute="trailing" constant="20" id="8wc-lu-ozh"/>
                 <constraint firstItem="xxD-Mk-6eA" firstAttribute="top" secondItem="Tsx-Hd-UcB" secondAttribute="bottom" constant="8" id="9El-WM-qGj"/>
                 <constraint firstItem="DR2-8B-eoo" firstAttribute="top" secondItem="Tob-vC-t5O" secondAttribute="bottom" id="BOE-yz-rM3"/>
-                <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottom" id="HpS-BR-SlB"/>
+                <constraint firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottom" id="HpS-BR-SlB"/>
                 <constraint firstItem="yUJ-9g-eIe" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" constant="20" id="NHZ-ga-iKt"/>
                 <constraint firstItem="Tob-vC-t5O" firstAttribute="top" secondItem="xxD-Mk-6eA" secondAttribute="bottom" constant="12" id="S7O-jz-cFH"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="FHu-Ph-Lv4" secondAttribute="trailing" constant="20" id="VDf-Ue-WxK"/>

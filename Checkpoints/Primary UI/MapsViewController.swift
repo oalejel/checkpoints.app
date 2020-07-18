@@ -11,8 +11,9 @@ import UIKit
 import CoreLocation
 
 protocol LocationsDelegate {
+    func allowEditingPins() -> Bool 
     func updatedSearchResults(mapItems: [MKMapItem])
-    func shouldPreviewCheckpoint(mapItem: MKMapItem)
+    func shouldPreviewCheckpoint(mapItem: MKMapItem, showActions: Bool)
     func shouldEndCheckpointPreview()
     func manualPinPlaced(for mapItem: MKMapItem) // for long press to drop pin gesture
     func focusOnMapItem(_ mapItem: MKMapItem)
@@ -50,6 +51,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     }
     
     @objc func longPress(gc: UILongPressGestureRecognizer) {
+        if !(delegate?.allowEditingPins() ?? false) { return } // ignore if not allowed to add pins
         if gc.state == .began {
             let coordinate = mapView.convert(gc.location(ofTouch: 0, in: mapView), toCoordinateFrom: mapView)
             PathFinder.shared.computeMapItem(for: coordinate) { (mapItem) in
@@ -295,7 +297,8 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                     delegate?.shouldEndCheckpointPreview() // removes preview vc and pending pin (redundantly)
                 } else {
                     if let selectedMapItem = (selectedAnnotation as? CheckpointAnnotation)?.mapItem {
-                        delegate?.shouldPreviewCheckpoint(mapItem: selectedMapItem)
+                        let showActions = delegate?.allowEditingPins() ?? false 
+                        delegate?.shouldPreviewCheckpoint(mapItem: selectedMapItem, showActions: showActions)
                     } else {
                         fatalError("no map item for selected annotation!")
                     }

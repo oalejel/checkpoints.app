@@ -31,6 +31,7 @@ class CheckpointViewController: UIViewController {
     
     var mapItem: MKMapItem
     var checkpointAlreadyAdded: Bool
+    var showActions: Bool
     
     var delegate: LocationsDelegate? {
         didSet {
@@ -38,8 +39,9 @@ class CheckpointViewController: UIViewController {
         }
     }
     
-    init(mapItem: MKMapItem, alreadyAdded: Bool) {
+    init(mapItem: MKMapItem, alreadyAdded: Bool, showActions: Bool) {
         self.mapItem = mapItem
+        self.showActions = showActions
         self.checkpointAlreadyAdded = alreadyAdded
         super.init(nibName: nil, bundle: nil)
     }
@@ -65,6 +67,9 @@ class CheckpointViewController: UIViewController {
         } else {
             distanceLabel.text = "About \(Int(dist)) mi from current location"
         }
+
+        // hide buttons for removing / starting here if an override is required
+        existingCheckpointButtonsStack.isHidden = !showActions
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true

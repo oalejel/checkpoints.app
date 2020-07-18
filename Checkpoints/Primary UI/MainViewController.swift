@@ -27,14 +27,14 @@ protocol HeightAdjustmentDelegate {
     func didChangeHeight(height: CGFloat)
 }
 
-enum UserState {
-    case Searching, PreviewCheckpoint, ConfiguringRoute, CustomHeight(CGFloat)
+enum UserState: Equatable {
+    case Searching, PreviewCheckpoint, Routing(CGFloat? = nil), CustomHeight(CGFloat)
 }
 
 class MainViewController: UINavigationController, OverlayContainerDelegate, UIViewControllerTransitioningDelegate {
     
     func getOverlayHeight() -> CGFloat {
-        return notchHeight(for: .minimum, availableSpace: overlayController.availableSpace)
+        return searchingNotchHeight(for: .minimum, availableSpace: overlayController.availableSpace)
     }
     
     let overlayController = OverlayContainerViewController(style: .expandableHeight)
@@ -46,6 +46,7 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
     
     var state: UserState = .Searching {
         didSet {
+            print("NEW STATE: \(String(describing: state))")
             overlayController.invalidateNotchHeights() // trigger a height limit correction
         }
     }
@@ -79,7 +80,7 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
         addChild(overlayController, in: view)
     }
 
-    private func notchHeight(for notch: OverlayNotch, availableSpace: CGFloat) -> CGFloat {
+    private func searchingNotchHeight(for notch: OverlayNotch, availableSpace: CGFloat) -> CGFloat {
         switch notch {
         case .maximum:
             return availableSpace * 5 / 6
@@ -93,9 +94,11 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
 
 extension MainViewController: OverlayNavigationViewControllerDelegate {
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
-
-        if viewController is SearchViewController {
+        
+        if state != .Searching && viewController is SearchViewController {
             state = .Searching
+        } else if case let UserState.Routing(customHeight) = state, viewController is RouteConfigController || viewController is RouteResultViewController {
+            state = .Routing(customHeight)
         }
     }
 }
@@ -112,7 +115,7 @@ extension MainViewController: SearchViewControllerDelegate {
                 fatalError("tried to find a checkpoint not on map")
             }
         } else { // temporarily show the pin on the map
-            let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded)
+            let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded, showActions: true)
             cvc.delegate = self
             overlayNavigationController.push(cvc, animated: true)
             mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
@@ -129,16 +132,26 @@ extension MainViewController: SearchViewControllerDelegate {
     }
     
     func routePressed() {
-        let rcv = RouteConfigController(nibName: nil, bundle: nil)
+        let rcv = RouteConfigController(delegate: self)
         overlayNavigationController.push(rcv, animated: true)
-        state = .ConfiguringRoute
-        
+        state = .Routing(nil)
+        rcv.heightDelegate = self
+
         // fit all annotations in mapview
         mapsViewController.previewSpanningTreeRoute()
     }
 }
 
 extension MainViewController: LocationsDelegate {
+    
+    func allowEditingPins() -> Bool {
+        switch state {
+        case .Routing:
+            return false
+        default:
+            return true
+        }
+    }
 
     func focusOnMapItem(_ mapItem: MKMapItem) {
         mapsViewController.showPendingPin(mapItem: mapItem)
@@ -210,23 +223,23 @@ extension MainViewController: LocationsDelegate {
     }
     
     func shouldEndCheckpointPreview() {
-        state = .Searching
+//        state = .Searching
         mapsViewController.removePendingAnnotation()
         if overlayNavigationController.topViewController is CheckpointViewController {
             print("] resigning search first responder")
             let _ = searchViewController.resignFirstResponder()
-            overlayNavigationController.popViewController(animated: true)
+//            overlayNavigationController.popViewController(animated: true)
             overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
         }
     }
     
-    func shouldPreviewCheckpoint(mapItem: MKMapItem) {
-        state = .PreviewCheckpoint
+    func shouldPreviewCheckpoint(mapItem: MKMapItem, showActions: Bool) {
+//        state = .PreviewCheckpoint
         if overlayNavigationController.topViewController is CheckpointViewController {
             overlayNavigationController.popViewController(animated: false)
         }
         
-        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: true)
+        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: true, showActions: showActions)
         cvc.delegate = self
         state = .PreviewCheckpoint
         searchViewController.selectedMapItem = mapItem
@@ -238,7 +251,7 @@ extension MainViewController: LocationsDelegate {
     }
     
     func manualPinPlaced(for mapItem: MKMapItem) {
-        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: false)
+        let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: false, showActions: true)
         cvc.delegate = self
         state = .PreviewCheckpoint
         overlayNavigationController.push(cvc, animated: true)
@@ -249,14 +262,19 @@ extension MainViewController: LocationsDelegate {
 
 extension MainViewController: HeightAdjustmentDelegate {
     func didChangeHeight(height: CGFloat) {
-        state = .CustomHeight(height)
-        overlayController.invalidateNotchHeights()
+        state = .Routing(height) // invalidates notch heights
+//        overlayController.invalidateNotchHeights()
     }
 }
 
 extension MainViewController: RouteConfigDelegate {
     func cancellingRouteConfiguration() {
         print("TODO: cleanup route configuration preview on map")
+    }
+    
+    func previewMST() {
+        // fit all annotations in mapview
+        mapsViewController.previewSpanningTreeRoute()
     }
 }
 
@@ -265,7 +283,16 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
     // MARK: - OverlayContainerViewControllerDelegate
 
     func numberOfNotches(in containerViewController: OverlayContainerViewController) -> Int {
-        return OverlayNotch.allCases.count
+        switch state {
+            case .Searching:
+                return OverlayNotch.allCases.count
+            case .PreviewCheckpoint:
+                return 1
+            case .CustomHeight:
+                return 1
+            case .Routing:
+                return 1
+        }
     }
 
     func overlayContainerViewController(_ containerViewController: OverlayContainerViewController,
@@ -274,24 +301,48 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
         switch state {
         case .Searching:
             let notch = OverlayNotch.allCases[index]
-            return notchHeight(for: notch, availableSpace: availableSpace)
+            return searchingNotchHeight(for: notch, availableSpace: availableSpace)
         case .PreviewCheckpoint:
 //            let x = overlayNavigationController.topViewController!.view
             return overlayNavigationController.topViewController!.view.frame.size.height - 124 // TODO: fix this for all screens
         case .CustomHeight(let frameHeight):
             return frameHeight
-        case .ConfiguringRoute:
-//            guard let overlay = containerViewController.topViewController else { return 0 }
-//            let targetWidth = containerViewController.view.bounds.width
-//            let targetSize = CGSize(width: targetWidth, height: overlay.view.frame.size.height)//UIView.layoutFittingCompressedSize.height)
-//            let computedSize = overlay.view.systemLayoutSizeFitting(
-//                targetSize,
-//                withHorizontalFittingPriority: .required,
-//                verticalFittingPriority: .fittingSizeLevel
-//            )
-//            return computedSize.height
+        case .Routing(let optionalHeight):
+            if let frameHeight = optionalHeight {
+                return frameHeight
+            }
+            guard let overlay = containerViewController.topViewController else { return 0 }
+            /*
+//            overlay.view.translatesAutoresizingMaskIntoConstraints = false
+//            overlay.view.autoresizingMask = .flexibleHeight
+//            overlay.view.setNeedsLayout()
+//            overlay.view.layoutIfNeeded()
+//            overlay.view.invalidateIntrinsicContentSize()
+//            overlay.view.sizeToFit()
+            
+//            let x1 = RouteConfigController(nibName: nil, bundle: nil)
+//            x1.view.setNeedsLayout()
+//            x1.view.layoutIfNeeded()
+//            print(x1.view.frame)
 
-            return overlayNavigationController.topViewController!.view.frame.size.height
+            let targetWidth = containerViewController.view.bounds.width
+            let targetSize = CGSize(width: targetWidth, height: 379) // overlay.view.frame.size.height) //
+            print(overlay.view.intrinsicContentSize)
+            
+            
+//            let computedSize = overlay.view.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+            let computedSize = overlay.view.systemLayoutSizeFitting(
+                targetSize,
+                withHorizontalFittingPriority: .required,
+                verticalFittingPriority: .fittingSizeLevel
+            )
+            print(computedSize.height)
+            return computedSize.height
+            */
+            
+            let h = overlayNavigationController.topViewController!.view.frame.size.height
+            print(h)
+            return h
         }
     }
 
@@ -302,7 +353,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             return searchViewController.tableView
         case .PreviewCheckpoint:
             return nil
-        case .ConfiguringRoute:
+        case .Routing:
             return nil
         case .CustomHeight:
             return nil
@@ -325,7 +376,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
 //            let yes = vc.view.bounds.contains(convertedPoint)
 //            return yes
             return true
-        case .ConfiguringRoute:
+        case .Routing:
             return true
         case .CustomHeight:
             return true

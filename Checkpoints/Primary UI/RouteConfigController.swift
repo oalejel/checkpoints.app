@@ -10,6 +10,7 @@ import UIKit
 
 protocol RouteConfigDelegate {
     func cancellingRouteConfiguration() // good in case we want to modify map
+    func previewMST()
 }
 
 class RouteConfigController: UIViewController {
@@ -32,11 +33,19 @@ class RouteConfigController: UIViewController {
     var numTravelers = 1
     
     var delegate: RouteConfigDelegate?
-    var heightDelegate: HeightAdjustmentDelegate? {
-        didSet {
-            heightDelegate?.didChangeHeight(height: view.frame.size.height)
-        }
+    var heightDelegate: HeightAdjustmentDelegate?
+    
+    init(delegate: RouteConfigDelegate?) {
+        self.delegate = delegate
+        super.init(nibName: nil, bundle: nil)
     }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    var startStackHeight: CGFloat = 0
+    var largeHeight: CGFloat = 0
+    var smallHeight: CGFloat = 0
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -63,6 +72,9 @@ class RouteConfigController: UIViewController {
             preview.widthAnchor.constraint(equalToConstant: 64)
         ])
         
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(tappedPreview))
+        preview.addGestureRecognizer(tapGesture)
+        
         preview.backgroundColor = placeholderSquareView.backgroundColor
         routeInfoStack.insertArrangedSubview(preview, at: 0)
         
@@ -75,17 +87,23 @@ class RouteConfigController: UIViewController {
         checkpointCountLabel.text = "\(PathFinder.shared.destinationCollection.count) checkpoints"
         
         for i in 0..<preview.parentIndices.count {
-            distanceLowerBound += PathFinder.shared.distanceForUserIndices(i, preview.parentIndices[i])
+            distanceLowerBound += PathFinder.shared.threadSafeDistanceForUserIndices(i, preview.parentIndices[i])
         }
         // travel distance estimate is more realistic if we add
         // in the longest length a second time
         distanceLowerBound += PathFinder.shared.longestCheckpointDistance()
         
-        setSingleTravelerMode(isSingle: true)
+        startStackHeight = self.mainStackview.frame.size.height
     }
     
+    var didLayout = false
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        
+        if !didLayout {
+            didLayout = true
+            setSingleTravelerMode(isSingle: true)
+        }
 //        print(view.constraints)
 //        print(view.frame.size.height)
 //        print(view.bounds.size.height)
@@ -101,23 +119,15 @@ class RouteConfigController: UIViewController {
 //            view.removeConstraint(c)
 //        }
 //
+//        let h = view.bounds.height
+//        heightDelegate?.didChangeHeight(height: h)
+//        let manuallyComputedHeight = computeButton.frame.origin.y + computeButton.frame.size.height
 //        heightDelegate?.didChangeHeight(height: view.bounds.height)
+//        print(view.intrinsicContentSize.height)
     }
     
-    @IBAction func computePressed(_ sender: Any) {
-        let rrvc = RouteResultViewController(nibName: nil, bundle: nil)
-        navigationController?.pushViewController(rrvc, animated: true)
-//        PathFinder.shared.computeIndividualOptimalPath { routeArray in
-//            print("GOT OUTPUT: ")
-//            print(routeArray)
-//        }
-    }
-    
-    @IBAction func stepperValueChanged(_ sender: UIStepper) {
-        numTravelers = Int(sender.value)
-        updateTravelersDistanceText()
-    }
-    
+    // MARK: - UI Helpers
+
     func updateTravelersDistanceText() {
         travelerCountLabel.text = "\(numTravelers) travelers"
         
@@ -137,16 +147,9 @@ class RouteConfigController: UIViewController {
         }
     }
     
-    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
-        setSingleTravelerMode(isSingle: sender.selectedSegmentIndex == 0)
-    }
-    
-    @IBAction func closePressed(_ sender: CloseButton) {
-        delegate?.cancellingRouteConfiguration()
-        navigationController?.popViewController(animated: true)
-    }
-    
     func setSingleTravelerMode(isSingle: Bool) {
+        let start = mainStackview.frame.size.height
+
         if isSingle {
             // leave stepper with stale value, but update numTravelers
             numTravelers = 1
@@ -178,5 +181,46 @@ class RouteConfigController: UIViewController {
                 self.stepperSeparator.isHidden = false
             }
         }
+        
+        let end = mainStackview.frame.size.height
+        if start > end { // shrinking
+            heightDelegate?.didChangeHeight(height: smallHeight) //view.bounds.height - (start - end))
+        } else if start == end { // small hack for first time this happens, where we need to adjust for the height
+            smallHeight = view.bounds.height - (startStackHeight - mainStackview.frame.size.height)
+            largeHeight = view.bounds.height
+            heightDelegate?.didChangeHeight(height: smallHeight)
+        } else {
+            heightDelegate?.didChangeHeight(height: largeHeight) //view.bounds.height - (start - end) - permanentViewOffset)
+        }
+
+    }
+    
+    // MARK: - IBActions and Callbacks
+    
+    @IBAction func segmentChanged(_ sender: UISegmentedControl) {
+        setSingleTravelerMode(isSingle: sender.selectedSegmentIndex == 0)
+    }
+    
+    @IBAction func closePressed(_ sender: CloseButton) {
+        delegate?.cancellingRouteConfiguration()
+        navigationController?.popViewController(animated: true)
+    }
+    
+    @IBAction func computePressed(_ sender: Any) {
+        let rrvc = RouteResultViewController(nibName: nil, bundle: nil)
+        navigationController?.pushViewController(rrvc, animated: true)
+//        PathFinder.shared.computeIndividualOptimalPath { routeArray in
+//            print("GOT OUTPUT: ")
+//            print(routeArray)
+//        }
+    }
+        
+    @IBAction func stepperValueChanged(_ sender: UIStepper) {
+        numTravelers = Int(sender.value)
+        updateTravelersDistanceText()
+    }
+    
+    @objc func tappedPreview() {
+        delegate?.previewMST()
     }
 }
