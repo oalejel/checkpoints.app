@@ -47,11 +47,12 @@ class MSTPreview: UIView {
     
     override func draw(_ rect: CGRect) {
         if let context = UIGraphicsGetCurrentContext() {
-            let mstColor = UIColor(red: 0.699, green: 0.453, blue: 0.398, alpha: 1)
+            let mstColor = UIColor.systemBlue//UIColor(red: 0.699, green: 0.453, blue: 0.398, alpha: 1)
+            let radius = min(0.1 * rect.size.width, max(2, rect.size.width / CGFloat((4 * coordinates.count))))
+            let lineWidth: CGFloat = max(radius / 3, 1)
             mstColor.set()
-            let lineWidth: CGFloat = 1
             context.setLineWidth(lineWidth)
-            
+
             func pointFromFractionalTuple(xyTuple: (CGFloat, CGFloat)) -> CGPoint {
                 let a = xyTuple.0 * (0.6 * rect.size.width) + (0.2 * rect.size.width) // padding is 20% of box
                 let b = rect.size.height - (xyTuple.1 * (0.6 * rect.size.height) + (0.2 * rect.size.height))
@@ -70,7 +71,6 @@ class MSTPreview: UIView {
             
             for point in tranformedPoints {
                 // decide x and y positions using percentages along our padded width and height
-                let radius = min(0.1 * rect.size.width, max(lineWidth + 1, rect.size.width / CGFloat((4 * coordinates.count))))
                 context.addArc(center: point, radius: radius, startAngle: 0, endAngle: CGFloat.pi * 2, clockwise: true)
                 context.fillPath()
             }
@@ -78,7 +78,12 @@ class MSTPreview: UIView {
         
         layer.cornerRadius = 10
         layer.borderWidth = 1
-        layer.borderColor = UIColor.lightGray.cgColor
+        if #available(iOS 13.0, *) {
+            layer.borderColor = UIColor.systemGray5.cgColor
+        } else {
+            // Fallback on earlier versions
+            layer.borderColor = UIColor.lightGray.cgColor
+        }
         layer.masksToBounds = true
     }
     

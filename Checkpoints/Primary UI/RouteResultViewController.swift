@@ -8,7 +8,9 @@
 
 import UIKit
 
-class RouteResultViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class RouteResultViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, StatefulViewController {
+    
+    
 
     @IBOutlet weak var startDirectionsButton: UIButton!
     @IBOutlet weak var closeButton: CloseButton!
@@ -31,6 +33,21 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         }
     }
     
+    var heldState: UserState!
+    
+    init(state: UserState) {
+        super.init(nibName: nil, bundle: nil)
+        self.heldState = state
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func getUserState() -> UserState {
+        return heldState
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -49,7 +66,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         startDirectionsButton.layer.cornerRadius = 10
         
         stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
-        let remainingMeters = PathFinder.shared.destinationCollection.totalDistanceAfterCheckpoint(startIndex: 0)
+        let remainingMeters = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: 0)
         setDistanceLabel(meters: remainingMeters)
         
         // NOTE: distance remaining may be based on a reordering of the path, as the user is allowed to change the sequence of directions
@@ -62,11 +79,11 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         tableView.contentInsetAdjustmentBehavior = .always
         
 //        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
+        tableView(tableView, didSelectRowAt: IndexPath(row: selectedStopIndex, section: 0))
         tableView.separatorStyle = .none
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
     }
-    
-    
-    
     
     // MARK: - UI Helpers
     
@@ -74,9 +91,9 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         let formatter = LengthFormatter()
         formatter.unitStyle = .medium
         formatter.numberFormatter.maximumSignificantDigits = 3
-        distanceRemainingLabel.text = formatter.string(fromMeters: meters) + " total"
-
+        distanceRemainingLabel.text = formatter.string(fromMeters: meters) + " left"
     }
+    
     func refreshDriverIndexUI() {
         if let num = driverNumber {
             driverLabel?.text = "Driver \(num)"
@@ -107,27 +124,39 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        tableView.deselectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: true)
-        var rowsToUpdate: [IndexPath] = []
-        if selectedStopIndex < indexPath.row {
-            rowsToUpdate = (selectedStopIndex...indexPath.row).map {
-                IndexPath(row: $0, section: 0)
+        DispatchQueue.main.async {
+            var rowsToUpdate: [IndexPath] = []
+            if self.selectedStopIndex < indexPath.row {
+                rowsToUpdate = (self.selectedStopIndex...indexPath.row).map {
+                    IndexPath(row: $0, section: 0)
+                }
+            } else {
+                rowsToUpdate = (indexPath.row...self.selectedStopIndex).map {
+                    IndexPath(row: $0, section: 0)
+                }
             }
-        } else {
-            rowsToUpdate = (indexPath.row...selectedStopIndex).map {
-                IndexPath(row: $0, section: 0)
-            }
+            self.selectedStopIndex = indexPath.row
+            tableView.selectRow(at: IndexPath(row: self.selectedStopIndex, section: 0), animated: true, scrollPosition: .middle)
+            tableView.reloadRows(at: rowsToUpdate, with: .none)
+            
+            let selectedMapItem = PathFinder.shared.destinationCollection[indexPath.row]
+            
+            UIView.transition(with: self.view, duration: 0.2, options: [.curveEaseInOut, .transitionCrossDissolve], animations: {
+                self.nextDestinationLabel.text = selectedMapItem.name ?? selectedMapItem.placemark.subtitle ?? "\(selectedMapItem.placemark.coordinate.latitude), \(selectedMapItem.placemark.coordinate.longitude)"
+                
+                let stopsRemaining = PathFinder.shared.destinationCollection.count - indexPath.row
+                self.stopsRemainingLabel.text = "\(stopsRemaining)"
+                if stopsRemaining == 1 {
+                    self.stopsRemainingLabel.text! += " stop remaining"
+                } else {
+                    self.stopsRemainingLabel.text! += " stops remaining"
+                }
+                
+                let distanceRemaining = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: indexPath.row - 1)
+                self.setDistanceLabel(meters: distanceRemaining)
+
+            }, completion: nil)
         }
-        selectedStopIndex = indexPath.row
-        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: true, scrollPosition: .middle)
-        tableView.reloadRows(at: rowsToUpdate, with: .automatic)
-        
-        let selectedMapItem = PathFinder.shared.destinationCollection[indexPath.row]
-        UIView.animate(withDuration: 0.2, delay: 0, options: .transitionCrossDissolve, animations: {
-            self.nextDestinationLabel.text = selectedMapItem.name ?? selectedMapItem.placemark.subtitle ?? "\(selectedMapItem.placemark.coordinate.latitude), \(selectedMapItem.placemark.coordinate.longitude)"
-            self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - indexPath.row) stops remaining"
-            let distanceRemaining = PathFinder.shared.destinationCollection.totalDistanceAfterCheckpoint(startIndex: indexPath.row)
-            self.setDistanceLabel(meters: distanceRemaining)
-        }, completion: nil)
     }
     
     // MARK: - Table View Datasource
@@ -166,5 +195,36 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
             fatalError("unable to deque route cell")
         }
     }
-
+    
+    // MARK: - User Progress Tracking
+    
+    @objc func willEnterForeground() {
+        // check that we are closer to the current destination than the previous checkpoint. if so, move on to the next index
+        // only if we have more destinations to reach
+        if selectedStopIndex < PathFinder.shared.destinationCollection.count - 1 {
+            print("awaiting loc update to check if we arrived")
+            PathFinder.shared.awaitLocationUpdate { currentCoord in
+                print("comparing cur to next destination!!!")
+                let lastCoord = PathFinder.shared.destinationCollection[self.selectedStopIndex - 1].placemark.coordinate
+                let nextCoord = PathFinder.shared.destinationCollection[self.selectedStopIndex].placemark.coordinate
+                
+                var distToLast = pow(lastCoord.latitude - currentCoord.latitude, 2)
+                distToLast += pow(lastCoord.longitude - currentCoord.longitude, 2)
+                
+                var distToNext = pow(nextCoord.latitude - currentCoord.latitude, 2)
+                distToNext += pow(nextCoord.longitude - currentCoord.longitude, 2)
+                if distToLast > distToNext {
+                    DispatchQueue.main.async {
+                        self.tableView(self.tableView, didSelectRowAt: IndexPath(row: self.selectedStopIndex + 1, section: 0))
+                    }
+                } else {
+                    print("closer to last dest than current")
+                }
+            }
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 }

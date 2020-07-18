@@ -109,12 +109,13 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         mapView.addAnnotation(pendingAnnotation!)
         
         var offsetCoord = mapItem.placemark.coordinate
-        if offsetCoord.latitude > 0 {
-            offsetCoord.latitude -= self.mapView.region.span.latitudeDelta * 0.1
-        } else {
-            offsetCoord.latitude += self.mapView.region.span.latitudeDelta * 0.1
-        }
+//        if offsetCoord.latitude > 0 {
+        offsetCoord.latitude -= self.mapView.region.span.latitudeDelta * 0.1
+//        } else {
+//            offsetCoord.latitude += self.mapView.region.span.latitudeDelta * 0.1
+//        }
         mapView.setCenter(offsetCoord, animated: true)
+        
     }
     
     // set `focus` to true to zoom the camera on the newly dropped pin
@@ -136,11 +137,11 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         
         if focus {
             var offsetCoord = mapItem.placemark.coordinate
-            if offsetCoord.latitude > 0 {
-                offsetCoord.latitude -= self.mapView.region.span.latitudeDelta * 0.1
-            } else {
-                offsetCoord.latitude += self.mapView.region.span.latitudeDelta * 0.1
-            }
+//            if offsetCoord.latitude > 0 {
+            offsetCoord.latitude -= self.mapView.region.span.latitudeDelta * 0.1
+//            } else {
+//                offsetCoord.latitude += self.mapView.region.span.latitudeDelta * 0.1
+//            }
             mapView.setCenter(offsetCoord, animated: true)
         }
     }
@@ -234,6 +235,9 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                 }
             }
         }
+        
+        // update pathfinder's live user location
+        PathFinder.shared.mapUpdatedLocation = userLocation.coordinate
     }
     
     func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {

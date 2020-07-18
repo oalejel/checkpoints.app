@@ -32,7 +32,7 @@
                         </constraints>
                     </view>
                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="1234 Penny Lane Circle, Livonia, MI" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="RhZ-bu-deM">
-                        <rect key="frame" x="43" y="16.5" width="269.5" height="21"/>
+                        <rect key="frame" x="43" y="16.5" width="263.5" height="21"/>
                         <fontDescription key="fontDescription" type="system" pointSize="17"/>
                         <nil key="textColor"/>
                         <nil key="highlightedColor"/>
@@ -63,10 +63,10 @@
                         </state>
                     </button>
                     <button opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="249" horizontalCompressionResistancePriority="753" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Xqn-a0-b3a">
-                        <rect key="frame" x="320.5" y="12" width="60" height="30"/>
+                        <rect key="frame" x="314.5" y="12" width="72" height="30"/>
                         <color key="backgroundColor" red="0.19735816119999999" green="0.73971271510000003" blue="0.55291897059999995" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
                         <constraints>
-                            <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="60" id="hIL-ok-b0x"/>
+                            <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="72" id="hIL-ok-b0x"/>
                         </constraints>
                         <state key="normal" title="Start">
                             <color key="titleColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>

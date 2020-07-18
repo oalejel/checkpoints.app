@@ -118,7 +118,7 @@ class DestinationTracker {
     }
     
     //
-    func totalDistanceAfterCheckpoint(startIndex: Int, driverIndex: Int? = nil) -> Double {
+    func distanceAfterCheckpoint(startIndex: Int, driverIndex: Int? = nil) -> Double {
         #warning("support mutliple drivers here")
         if let driverIndex = driverIndex {
             fatalError("not implemented for multiple drivers \(driverIndex)")
@@ -152,6 +152,14 @@ class PathFinder {
     
     var startLocationItem: MKMapItem? // publicly define which item the user must begin their route with
     var firstRecordedCurrentLocation: MKMapItem? // convenient for marking where user had their "current location" marked when the app launched
+    var mapUpdatedLocation: CLLocationCoordinate2D? {
+        didSet {
+            if let loc = mapUpdatedLocation {
+                locationUpdateAwaitClosure = nil
+                locationUpdateAwaitClosure?(mapUpdatedLocation ?? loc)
+            }
+        }
+    }
     
     // array containing mapitems for all destinations with corresponding distances as stored in the distance matrix
     // the order of these destinations *never* changes; instead, we change the destIntermediateIndices array to avoid having to reorganize the distance matrix
@@ -480,6 +488,11 @@ class PathFinder {
     // meters
     public func longestCheckpointDistance() -> Double {
         return destinationCollection.longestDistance()
+    }
+    
+    var locationUpdateAwaitClosure: ((CLLocationCoordinate2D) -> Void)? = nil
+    public func awaitLocationUpdate(_ completion: @escaping (CLLocationCoordinate2D) -> Void) {
+        self.locationUpdateAwaitClosure = completion
     }
     
     private func resetPriorData() {

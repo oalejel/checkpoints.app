@@ -47,7 +47,7 @@ class CheckpointCell: UITableViewCell {
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
-        backgroundColor = UIColor(white: 0.95, alpha: 1)
+        backgroundColor = .white // UIColor(white: 0.95, alpha: 1)
         isStartLocationLabel.isHidden = true
     }
 

@@ -60,7 +60,7 @@ class SearchViewController: UIViewController,
         view.layer.cornerRadius = 26
         view.layer.masksToBounds = true
         
-        view.backgroundColor = UIColor(white: 0.95, alpha: 1)
+        view.backgroundColor = .white//UIColor(white: 0.95, alpha: 1)
         view.addSubview(tableView)
         view.addSubview(header)
 //        header.heightAnchor.constraint(equalToConstant: 70).isActive = true
@@ -74,7 +74,7 @@ class SearchViewController: UIViewController,
         tableView.delegate = self
         tableView.pinToSuperview(edges: [.left, .right, .bottom])
         tableView.topAnchor.constraint(equalTo: header.bottomAnchor).isActive = true
-        tableView.backgroundColor = .clear
+        tableView.backgroundColor = .white
         tableView.register(UINib(nibName: "LocationCell", bundle: nil), forCellReuseIdentifier: "locationCell")
         tableView.register(UINib(nibName: "CheckpointCell", bundle: nil), forCellReuseIdentifier: "checkpointCell")
         tableView.isEditing = false // CHANGE THIS LINE WHEN YOU WANT TO ALLOW REORDERING BY DEFAULT
@@ -147,7 +147,7 @@ class SearchViewController: UIViewController,
             cell.locationNameLabel.text = locationString
             cell.locationDetailLabel.text = detailString
             
-            cell.backgroundColor = UIColor.init(white: 0.95, alpha: 1)
+            cell.backgroundColor = .white //UIColor.init(white: 0.95, alpha: 1)
     //        cell.locationNameLabel?.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
             if #available(iOS 13.0, *) {
     //            cell.locationDetailLabel.text = mapItem.pointOfInterestCategory?.rawValue ?? "Not a POI"

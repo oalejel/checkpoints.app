@@ -13,7 +13,7 @@ protocol RouteConfigDelegate {
     func previewMST()
 }
 
-class RouteConfigController: UIViewController {
+class RouteConfigController: UIViewController, StatefulViewController {
     
     @IBOutlet weak var placeholderSquareView: UIView!
     @IBOutlet weak var routeInfoStack: UIStackView!
@@ -46,6 +46,10 @@ class RouteConfigController: UIViewController {
     var startStackHeight: CGFloat = 0
     var largeHeight: CGFloat = 0
     var smallHeight: CGFloat = 0
+    
+    func getUserState() -> UserState {
+        return .Routing([smallHeight, largeHeight])
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -104,26 +108,6 @@ class RouteConfigController: UIViewController {
             didLayout = true
             setSingleTravelerMode(isSingle: true)
         }
-//        print(view.constraints)
-//        print(view.frame.size.height)
-//        print(view.bounds.size.height)
-//
-//        let constraint = view.constraints.first { c -> Bool in
-//            let istrue = (c.firstItem as? UIView == view) && c.firstAnchor == view.heightAnchor
-//            return istrue
-//        }
-//
-//        if let c = constraint {
-//            print("Found constraint!!!")
-//            print(c)
-//            view.removeConstraint(c)
-//        }
-//
-//        let h = view.bounds.height
-//        heightDelegate?.didChangeHeight(height: h)
-//        let manuallyComputedHeight = computeButton.frame.origin.y + computeButton.frame.size.height
-//        heightDelegate?.didChangeHeight(height: view.bounds.height)
-//        print(view.intrinsicContentSize.height)
     }
     
     // MARK: - UI Helpers
@@ -184,13 +168,14 @@ class RouteConfigController: UIViewController {
         
         let end = mainStackview.frame.size.height
         if start > end { // shrinking
-            heightDelegate?.didChangeHeight(height: smallHeight) //view.bounds.height - (start - end))
+            heightDelegate?.didChangeHeightState(state: .Routing([smallHeight])) //view.bounds.height - (start - end))
         } else if start == end { // small hack for first time this happens, where we need to adjust for the height
+            print(view.frame.size.height)
             smallHeight = view.bounds.height - (startStackHeight - mainStackview.frame.size.height)
             largeHeight = view.bounds.height
-            heightDelegate?.didChangeHeight(height: smallHeight)
+            heightDelegate?.didChangeHeightState(state: .Routing([smallHeight]))
         } else {
-            heightDelegate?.didChangeHeight(height: largeHeight) //view.bounds.height - (start - end) - permanentViewOffset)
+            heightDelegate?.didChangeHeightState(state: .Routing([largeHeight])) //view.bounds.height - (start - end) - permanentViewOffset)
         }
 
     }
@@ -207,12 +192,10 @@ class RouteConfigController: UIViewController {
     }
     
     @IBAction func computePressed(_ sender: Any) {
-        let rrvc = RouteResultViewController(nibName: nil, bundle: nil)
+        let passedOnState = UserState.Routing([smallHeight, UIScreen.main.bounds.height * 0.75])
+        let rrvc = RouteResultViewController(state: passedOnState)
         navigationController?.pushViewController(rrvc, animated: true)
-//        PathFinder.shared.computeIndividualOptimalPath { routeArray in
-//            print("GOT OUTPUT: ")
-//            print(routeArray)
-//        }
+        heightDelegate?.didChangeHeightState(state: passedOnState)
     }
         
     @IBAction func stepperValueChanged(_ sender: UIStepper) {

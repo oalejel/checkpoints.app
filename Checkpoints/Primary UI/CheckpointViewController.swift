@@ -15,7 +15,7 @@ import Contacts
 //    func focusOnMapItem(_ mapItem: MKMapItem)
 //}
 
-class CheckpointViewController: UIViewController {
+class CheckpointViewController: UIViewController, StatefulViewController {
     
     var scrollView = UIScrollView()
     @IBOutlet weak var nameLabel: UILabel!
@@ -50,6 +50,10 @@ class CheckpointViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    func getUserState() -> UserState {
+        return .PreviewCheckpoint
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -67,9 +71,6 @@ class CheckpointViewController: UIViewController {
         } else {
             distanceLabel.text = "About \(Int(dist)) mi from current location"
         }
-
-        // hide buttons for removing / starting here if an override is required
-        existingCheckpointButtonsStack.isHidden = !showActions
         
         addButton.layer.cornerRadius = 8
         addButton.layer.masksToBounds = true
@@ -94,7 +95,12 @@ class CheckpointViewController: UIViewController {
             addButton.isHidden = false
             existingCheckpointButtonsStack.isHidden = true
         }
-
+        
+        // hide buttons for removing / starting here if an override is required
+        if !showActions {
+            existingCheckpointButtonsStack.isHidden = true
+        }
+        
         updateSetStartButton()
     }
     
