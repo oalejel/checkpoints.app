@@ -49,6 +49,7 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
     private let searchViewController = SearchViewController(showsCloseAction: false)
     private let mapsViewController = MapsViewController()
     
+    
     var state: UserState = .Searching {
         didSet {
             print("NEW STATE: \(String(describing: state))")
@@ -84,6 +85,14 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
 
         overlayNavigationController.push(searchViewController, animated: true)
         addChild(overlayController, in: view)
+        
+        view.addSubview(MapActivityStatus.activityIndicator)
+        MapActivityStatus.activityIndicator.stopAnimating()
+        MapActivityStatus.activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        view.addConstraints([
+            MapActivityStatus.activityIndicator.topAnchor.constraint(equalToSystemSpacingBelow: view.safeAreaLayoutGuide.topAnchor, multiplier: 1),
+            MapActivityStatus.activityIndicator.leadingAnchor.constraint(equalToSystemSpacingAfter: view.safeAreaLayoutGuide.leadingAnchor, multiplier: 2)
+        ])
     }
 
     private func fractionalNotchHeights(for notch: OverlayNotch, availableSpace: CGFloat) -> CGFloat {
@@ -290,6 +299,35 @@ extension MainViewController: HeightAdjustmentDelegate {
 }
 
 extension MainViewController: RouteConfigDelegate {
+    
+    func showNumberedAnnotations(orderedMapItems: [MKMapItem]) {
+        mapsViewController.mapView.removeAnnotations(mapsViewController.mapView.annotations)
+        
+        var generatedAnnotations: [CheckpointAnnotation] = []
+        for i in 0..<orderedMapItems.count {
+            let item = orderedMapItems[i]
+            let ann = CheckpointAnnotation(mapItem: item)
+            ann.viewType = .Numbered(i + 1)
+            ann.title = item.placemark.name ?? item.placemark.title ?? "\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude)"
+            ann.coordinate = item.placemark.coordinate
+            generatedAnnotations.append(ann)
+        }
+        
+        mapsViewController.mapView.addAnnotations(generatedAnnotations)
+    }
+    
+    func showPinAnnotations(unorderedMapItems: [MKMapItem]) {
+        mapsViewController.mapView.removeAnnotations(mapsViewController.mapView.annotations)
+        let generatedAnnotations = unorderedMapItems.map { item -> CheckpointAnnotation in
+            let ann = CheckpointAnnotation(mapItem: item)
+            ann.viewType = .Pin
+            ann.title = item.placemark.name ?? item.placemark.title ?? "\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude)"
+            ann.coordinate = item.placemark.coordinate
+            return ann
+        }
+        mapsViewController.mapView.addAnnotations(generatedAnnotations)
+    }
+    
     func cancellingRouteConfiguration() {
         print("TODO: cleanup route configuration preview on map")
     }

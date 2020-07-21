@@ -130,6 +130,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
             pendingAnnotation = nil
         } else {
             pointAnnotation = CheckpointAnnotation(mapItem: mapItem)
+            pointAnnotation.viewType = .Pin
             pointAnnotation?.title = mapItem.placemark.name ?? mapItem.placemark.title ?? "\(mapItem.placemark.coordinate.latitude), \(mapItem.placemark.coordinate.longitude)"
             pointAnnotation.coordinate = mapItem.placemark.coordinate
             mapView.addAnnotation(pointAnnotation)
@@ -190,7 +191,8 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         }
     }
     
-    var didCenterOnce = false
+    
+    // required for location delegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
 //        if !didCenterOnce {
 //            if let myLoc = locations.first {
@@ -207,6 +209,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
 //        }
     }
     
+    var didCenterOnce = false
     func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
         if !didCenterOnce {
             didCenterOnce = true
@@ -256,31 +259,29 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         guard let annotation = annotation as? CheckpointAnnotation else {
             return nil
         }
-        let reuseIdentifier = "pin"
-        let annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
-        annotationView?.canShowCallout = true
         
-        if annotationView == nil {
-            let annotationView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseIdentifier)
-            annotationView.animatesDrop = true
-            annotationView.canShowCallout = true
-            return annotationView
-//            annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: reuseIdentifier)
-//            annotationView?.canShowCallout = true
-        } else {
-            annotationView?.annotation = annotation
+        var reuseID = "numbered_pin_ID"
+        if annotation.viewType == .Pin { reuseID = "pin_ID"}
+        var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseID)
+        
+        switch annotation.viewType {
+        case .Pin:
+            if annotationView == nil {
+                let pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseID)
+                pinView.animatesDrop = true
+                annotationView = pinView
+            }
+        case .Numbered(let num):
+            if annotationView == nil {
+                let numberedView = NumberedAnnotationView(annotation: annotation, reuseIdentifier: reuseID)
+                annotationView = numberedView
+            }
+            (annotationView as! NumberedAnnotationView).setTitleNumber(num)
         }
+        
+        annotationView!.canShowCallout = true
+        annotationView!.annotation = annotation
         return annotationView
-
-//        if let customPointAnnotation = annotation as? CheckpointAnnotation {
-//            if let imageName = customPointAnnotation.imageName {
-//                annotationView?.image = UIImage(named: imageName)
-//            }
-//
-//            return annotationView
-//        }
-//
-//        return nil
     }
     
     func mapView(_ mapView: MKMapView, clusterAnnotationForMemberAnnotations memberAnnotations: [MKAnnotation]) -> MKClusterAnnotation {

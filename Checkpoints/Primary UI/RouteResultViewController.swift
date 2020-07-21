@@ -26,6 +26,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     
     let CELL_ID = "routecell"
     
+    @IBOutlet weak var infoAndButtonStack: UIStackView!
     @IBOutlet weak var nextDestStack: UIStackView!
     var driverNumber: Int? {
         didSet {
@@ -34,10 +35,14 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     }
     
     var heldState: UserState!
+    var delegate: RouteConfigDelegate!
     
-    init(state: UserState) {
+    var finishedComputation = false // track in case we need to unhide before view appears
+    
+    init(state: UserState, delegate: RouteConfigDelegate) {
         super.init(nibName: nil, bundle: nil)
         self.heldState = state
+        self.delegate = delegate
     }
     
     required init?(coder: NSCoder) {
@@ -50,25 +55,22 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        // Do any additional setup after loading the view.
-        PathFinder.shared.computeIndividualOptimalPath { routeArray in
-            print("GOT OUTPUT: ")
-            print(routeArray)
+        
+        // automatically hide everything in case loading the path takes a while
+        self.togglePrimaryUIVisibility(hidden: true, animated: false)
+        
+        PathFinder.shared.setProgressPercentageUpdateHandler { (percent) in
+            print("new percent: \(percent)")
         }
         
+        // ---- essential ui setup
         view.layer.cornerRadius = 26
         view.layer.masksToBounds = true
 
         // prepare initial contents
         refreshDriverIndexUI()
-        
         startDirectionsButton.layer.cornerRadius = 10
-        
-        stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
-        let remainingMeters = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: 0)
-        setDistanceLabel(meters: remainingMeters)
-        
+                
         // NOTE: distance remaining may be based on a reordering of the path, as the user is allowed to change the sequence of directions
         // TODO: support cancelling the computation operation with user intervention with the x button
         
@@ -77,15 +79,76 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         tableView.delegate = self
         tableView.dataSource = self
         tableView.contentInsetAdjustmentBehavior = .always
-        
-//        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
-        tableView(tableView, didSelectRowAt: IndexPath(row: selectedStopIndex, section: 0))
         tableView.separatorStyle = .none
         
-        NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        // ---- start computation with handler
+        PathFinder.shared.computeIndividualOptimalPath { routeArray in
+//            print("GOT OUTPUT:", routeArray)
+            DispatchQueue.main.async {
+                self.finishedComputation = true
+                self.delegate.showNumberedAnnotations(orderedMapItems: routeArray)
+                
+                // if view already appeared, we must show primary UI here
+                if self.viewWillAppearedCalled {
+                    self.togglePrimaryUIVisibility(hidden: false, animated: true)
+                }
+                
+                self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
+
+                let remainingMeters = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: 0)
+                self.setDistanceLabel(meters: remainingMeters)
+                
+                //        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
+                self.tableView(self.tableView, didSelectRowAt: IndexPath(row: self.selectedStopIndex, section: 0))
+                
+                NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+            }
+        }
     }
     
+    var viewWillAppearedCalled = false
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if !viewWillAppearedCalled && finishedComputation {
+            viewWillAppearedCalled = true // set in two places in case bad interleaving likely?
+            togglePrimaryUIVisibility(hidden: false, animated: false)
+        }
+        viewWillAppearedCalled = true
+    }
+    
+    var viewDidAppearCalled = false
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        viewDidAppearCalled = true
+    }
+    
+    
+    
     // MARK: - UI Helpers
+    
+    // call to remove progress bar
+    func togglePrimaryUIVisibility(hidden: Bool, animated: Bool) {
+        func show() {
+            driverLabel.isHidden = hidden
+            infoAndButtonStack.isHidden = hidden
+            tableView.isHidden = hidden
+            nextStopFooter.isHidden = hidden
+            
+            refreshDriverIndexUI() // must also do this to account for multiple drivers
+        }
+        
+        if animated {
+            UIView.animate(withDuration: 1, animations: show)
+        } else {
+            show()
+        }
+        
+        if hidden {
+            nextDestinationLabel.text = "Route"
+        } else {
+            nextDestinationLabel.text = "Next Stop"
+        }
+    }
     
     func setDistanceLabel(meters: Double) {
         let formatter = LengthFormatter()
@@ -117,6 +180,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     }
     
     @IBAction func closePressed(_ sender: Any) {
+        self.delegate.showPinAnnotations(unorderedMapItems: PathFinder.shared.destinationCollection.unsortedDestinations)
         navigationController?.popViewController(animated: true)
     }
     

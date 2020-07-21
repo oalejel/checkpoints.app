@@ -7,10 +7,13 @@
 //
 
 import UIKit
+import MapKit
 
 protocol RouteConfigDelegate {
     func cancellingRouteConfiguration() // good in case we want to modify map
     func previewMST()
+    func showNumberedAnnotations(orderedMapItems: [MKMapItem])
+    func showPinAnnotations(unorderedMapItems: [MKMapItem])
 }
 
 class RouteConfigController: UIViewController, StatefulViewController {
@@ -32,10 +35,10 @@ class RouteConfigController: UIViewController, StatefulViewController {
     var distanceLowerBound = 0.0 // distance in MST, used as an estimate for now
     var numTravelers = 1
     
-    var delegate: RouteConfigDelegate?
+    var delegate: RouteConfigDelegate!
     var heightDelegate: HeightAdjustmentDelegate?
     
-    init(delegate: RouteConfigDelegate?) {
+    init(delegate: RouteConfigDelegate) {
         self.delegate = delegate
         super.init(nibName: nil, bundle: nil)
     }
@@ -90,14 +93,21 @@ class RouteConfigController: UIViewController, StatefulViewController {
         
         checkpointCountLabel.text = "\(PathFinder.shared.destinationCollection.count) checkpoints"
         
-        for i in 0..<preview.parentIndices.count {
-            distanceLowerBound += PathFinder.shared.threadSafeDistanceForUserIndices(i, preview.parentIndices[i])
-        }
-        // travel distance estimate is more realistic if we add
-        // in the longest length a second time
-        distanceLowerBound += PathFinder.shared.longestCheckpointDistance()
+        self.startStackHeight = self.mainStackview.frame.size.height
         
-        startStackHeight = self.mainStackview.frame.size.height
+        PathFinder.shared.notifyOnRequestCompletion {
+            DispatchQueue.main.async {
+                for i in 0..<preview.parentIndices.count {
+                    self.distanceLowerBound += PathFinder.shared.destinationCollection.getDistance(between: i, and: preview.parentIndices[i])
+                }
+                // travel distance estimate is more realistic if we add
+                // in the longest length a second time
+                self.distanceLowerBound += PathFinder.shared.longestCheckpointDistance()
+                
+                // might need this since viewdidlayout might be called before completeion 
+                self.setSingleTravelerMode(isSingle: true)
+            }
+        }
     }
     
     var didLayout = false
@@ -193,7 +203,7 @@ class RouteConfigController: UIViewController, StatefulViewController {
     
     @IBAction func computePressed(_ sender: Any) {
         let passedOnState = UserState.Routing([smallHeight, UIScreen.main.bounds.height * 0.75])
-        let rrvc = RouteResultViewController(state: passedOnState)
+        let rrvc = RouteResultViewController(state: passedOnState, delegate: delegate)
         navigationController?.pushViewController(rrvc, animated: true)
         heightDelegate?.didChangeHeightState(state: passedOnState)
     }

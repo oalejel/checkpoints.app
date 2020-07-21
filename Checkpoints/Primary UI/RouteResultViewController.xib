@@ -13,6 +13,7 @@
                 <outlet property="closeButton" destination="FHu-Ph-Lv4" id="Efd-Ai-Fnn"/>
                 <outlet property="distanceRemainingLabel" destination="2bn-sU-lDM" id="af3-kc-P7T"/>
                 <outlet property="driverLabel" destination="pe6-bX-0e8" id="WKU-bA-kGi"/>
+                <outlet property="infoAndButtonStack" destination="xxD-Mk-6eA" id="12r-ai-HiE"/>
                 <outlet property="nextDestStack" destination="qMH-vi-SAj" id="MVp-Sv-NUQ"/>
                 <outlet property="nextDestinationLabel" destination="3Wy-Jc-jrk" id="Zs3-uQ-uYp"/>
                 <outlet property="nextStopFooter" destination="re9-cL-sta" id="EGB-oG-irX"/>
@@ -24,7 +25,7 @@
         </placeholder>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
         <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="i5M-Pr-FkT">
-            <rect key="frame" x="0.0" y="0.0" width="414" height="331"/>
+            <rect key="frame" x="0.0" y="0.0" width="414" height="399"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="FHu-Ph-Lv4" customClass="CloseButton" customModule="Checkpoints" customModuleProvider="target">
@@ -107,7 +108,7 @@
                     </constraints>
                 </stackView>
                 <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="DR2-8B-eoo">
-                    <rect key="frame" x="0.0" y="154" width="414" height="177"/>
+                    <rect key="frame" x="0.0" y="154" width="414" height="245"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
                 </tableView>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Tob-vC-t5O" userLabel="Separator">
@@ -126,7 +127,7 @@
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="xxD-Mk-6eA" secondAttribute="trailing" constant="20" id="8wc-lu-ozh"/>
                 <constraint firstItem="xxD-Mk-6eA" firstAttribute="top" secondItem="Tsx-Hd-UcB" secondAttribute="bottom" constant="8" id="9El-WM-qGj"/>
                 <constraint firstItem="DR2-8B-eoo" firstAttribute="top" secondItem="Tob-vC-t5O" secondAttribute="bottom" id="BOE-yz-rM3"/>
-                <constraint firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottom" id="HpS-BR-SlB"/>
+                <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottomMargin" constant="8" id="HpS-BR-SlB"/>
                 <constraint firstItem="yUJ-9g-eIe" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" constant="20" id="NHZ-ga-iKt"/>
                 <constraint firstItem="Tob-vC-t5O" firstAttribute="top" secondItem="xxD-Mk-6eA" secondAttribute="bottom" constant="12" id="S7O-jz-cFH"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="FHu-Ph-Lv4" secondAttribute="trailing" constant="20" id="VDf-Ue-WxK"/>
@@ -138,7 +139,7 @@
             </constraints>
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
-            <point key="canvasLocation" x="63.768115942028992" y="90.736607142857139"/>
+            <point key="canvasLocation" x="63.768115942028992" y="113.50446428571428"/>
         </view>
     </objects>
 </document>

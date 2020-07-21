@@ -51,6 +51,7 @@ class DestinationTracker {
     }
     
     func append(_ mapItem: MKMapItem) {
+        print("APPEND - \(distanceMatrix.count) - \(mapItem.name ?? mapItem.placemark.subtitle ?? "no useful name?")")
         orderedDestinations.append(mapItem)
         intermediateIndices.append(intermediateIndices.count)
         distanceMatrix.append(Array(repeating: Double.infinity, count: distanceMatrix.count)) // prepare row of directions
@@ -133,7 +134,7 @@ class DestinationTracker {
     }
     
     func assertsomething() {
-        let testMatrix: [[(Int, Int)]] = [
+        let _: [[(Int, Int)]] = [
             [],
             [(1, 0)],
             [(2, 0), (2, 1)],
@@ -170,6 +171,8 @@ class PathFinder {
     private var bestPath: [Int] = []
     private var bestPathDistance = Double.infinity
     private let destinationRequestSemaphore = DispatchSemaphore(value: 1)
+    
+    
 //    private var distanceMatrix = [[Double]]() // distances in meters
     /*
         Distance Matrix storage format
@@ -182,6 +185,8 @@ class PathFinder {
     
     // used to check whether its safe to proceed
     private var incompleteJobCount = 0
+    private var taskProgressDenominator = 0
+    private var taskProgressNumerator = 0
     
     private var permutation = [Int]()
     
@@ -201,25 +206,30 @@ class PathFinder {
         assert(false)
     }
     
-    private func waitOnIncompleteJobs() {
-        destinationRequestSemaphore.wait()
-        while incompleteJobCount != 0 {
-            // release to allow access to these semaphores
-            print("waiting")
-            destinationRequestSemaphore.signal()
-            destinationRequestSemaphore.wait()
+    // calls completion when there are no more pending incomplete destination requests
+    func notifyOnRequestCompletion(_ completion: @escaping () -> Void) {
+        DispatchQueue.global(qos: .default).async {
+            self.destinationRequestSemaphore.wait()
+            while self.incompleteJobCount != 0 {
+                // release to allow access to these semaphores
+                print("waiting")
+                self.destinationRequestSemaphore.signal()
+                self.destinationRequestSemaphore.wait()
+            }
+            self.destinationRequestSemaphore.signal()
+            DispatchQueue.main.async { completion() }
         }
-        destinationRequestSemaphore.signal()
     }
              
-    
     // add destination and precalculate distances with other locations
     func addDestination(mapItem: MKMapItem) {
-        
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .default).async {
             // no need to use mutex here, since addDestination is signaled by user interaction
-            
+            MapActivityStatus.toggleBusy(true)
             self.incompleteJobCount += 1
+            let childEdgeCount = self.destinationCollection.count
+            self.taskProgressDenominator += childEdgeCount
+            
             print("waiting from adddest")
             self.destinationRequestSemaphore.wait() // block a remove operation
             
@@ -247,15 +257,32 @@ class PathFinder {
                     guard let etaResponse = etaResponse else {
                         print(error ?? "Unknown error trying to compute ETA")
                         // TODO: tell someone that this failed and rollback changes....
+                        fatalError("FATAL: find way to handle case where eta cant be computed")
                         return
+                    }
+                    
+                    self.taskProgressNumerator += 1
+                    let lastPercent = self.currentTaskProgress
+                    let newPercent = Float(self.taskProgressNumerator) / Float(self.taskProgressDenominator)
+                    if self.currentTaskProgress - lastPercent > 0.01 { // if delta is > 1%, update progress
+                        self.currentTaskProgress = newPercent // calls setter to update UI
                     }
 //                    assert(self.destinationCollection[rowIndex].count == colIndex)
                     self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: etaResponse.distance)
                     etaSemaphore.signal() // indicate that we can move on to next iteration
                 }
                 etaSemaphore.wait() // wait on eta to finish adding distance to matrix
+//                while directions.isCalculating {
+//                    // do nothing
+//                }
             }
             self.incompleteJobCount -= 1
+//            self.taskProgressDenominator -= childEdgeCount
+            if self.incompleteJobCount == 0 {
+                self.taskProgressDenominator = 1 // cannot have divide by zero
+                self.taskProgressNumerator = 0
+                MapActivityStatus.toggleBusy(false)
+            }
             self.destinationRequestSemaphore.signal() // allow others to join
             print("signaled from adddest")
             
@@ -277,23 +304,44 @@ class PathFinder {
         self.destinationRequestSemaphore.signal()
     }
     
+    // for now, cut off is 5 factorial
+    // returns tuple of branch number we expect and number of branches and depth to check at for permutation of n entries
+    private func cutoffFactorial(n: Int) -> (Int, Int) { // fac returning nil if more than we care for
+        assert(n < 120)
+        var mult = n - 2
+        var out = n - 1
+        while out * mult < 150 && mult > 2 {
+            out *= mult
+            mult -= 1
+        }
+        return (out, n - mult) // n = 100 --> 99, n = 5 -> 5 --> 4 * 3 --> 12
+    }
+    
     // warning: may want to add a progress update closure to give updates to the progress of the computation
-    func computeIndividualOptimalPath(completion: (([MKMapItem]) -> Void)) {
-        assert(destinationCollection.count > 1)
-        computePathUpperBound()
-        print("starting with path upper bound of weight: ", bestPathDistance)
-        // WARNING: rotate bestPath so that index 0 has node 0 (start node)
-        permutation = bestPath // start with best one so far to help search time
-        generatePermutations(permLength: 1, growingDistance: 0.0)
-        
-        print("best permutation: ", bestPath)
+    var permCheckDepth = 0 // depth at which to increment our branch progress count
+    func computeIndividualOptimalPath(completion: @escaping (([MKMapItem]) -> Void)) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            assert(self.destinationCollection.count > 1)
+            self.computePathUpperBound()
+            
+            // estimating how many permutation branches we want to track
+            self.taskProgressNumerator = 0
+            (self.taskProgressDenominator, self.permCheckDepth) = self.cutoffFactorial(n: self.destinationCollection.count)
+            
+            print("starting with path upper bound of weight: ", self.bestPathDistance)
+            // WARNING: rotate bestPath so that index 0 has node 0 (start node)
+            self.permutation = self.bestPath // start with best one so far to help search time
+            self.generatePermutations(permLength: 1, growingDistance: 0.0)
+            
+            print("best permutation (user indices): ", self.bestPath)
+            completion(self.self.bestPath.map { self.destinationCollection[$0] })
+        }
     }
     
     // Note: in this case, the start destination must also be the end destination (for now)
     //      the TSP is optimized in such a way that does not consider paths returning back to
     //      the start location (destinations[0]). This should be optimal.
-    func computeClusteredOptimalPath(numTravelers: Int,
-                                     completion: (([[MKMapItem]]) -> Void)) {
+    func computeClusteredOptimalPath(numTravelers: Int, completion: @escaping (([[MKMapItem]]) -> Void)) {
         assert(numTravelers > destinationCollection.count)
         computeIndividualOptimalPath { (path) in
             
@@ -331,12 +379,12 @@ class PathFinder {
             // WARNING: made the realization that a split TSP might not be optimal... subpaths in TSP are optimized and primed for future approach to points in other "clusters". The closest way to connect 7 points in a simple path might not include the best way to connect the first 4 of those points
             
             // we expect distance traveled between points to be about the same, so remove points returning to home to compute avg
-            assert(bestPath[0] == 0)
-            assert(bestPath.last! == 0)
+            assert(self.bestPath[0] == 0)
+            assert(self.bestPath.last! == 0)
             let avgDistGoal =
-                (bestPathDistance
-                - (destinationCollection.getDistance(between: bestPath[0], and: bestPath[1]) +
-                    destinationCollection.getDistance(between: bestPath[bestPath.count - 2], and: bestPath.last!)))
+                (self.bestPathDistance
+                    - (self.destinationCollection.getDistance(between: self.bestPath[0], and: self.bestPath[1]) +
+                        self.destinationCollection.getDistance(between: self.bestPath[self.bestPath.count - 2], and: self.bestPath.last!)))
                 / Double(numTravelers)
             
             var pathSlices = [(Int, Int)]()
@@ -344,10 +392,10 @@ class PathFinder {
             var sliceStartIndexIndex = 1 // NOTE: this is an index into bestPath. Start at 1 to generalize skipping destinations[0]
             // WARNING: assuming bestPath[0] == destinations[0] and that bestPath.last == 0
             
-            for i in 1..<bestPath.count-1 { // excludes connect from start to 2nd vertex and penultimate back to start
+            for i in 1..<self.bestPath.count-1 { // excludes connect from start to 2nd vertex and penultimate back to start
                 let v1IndexIndex = i
                 let v2IndexIndex = i + 1 // should never equal .count or .count - 1
-                distanceAccumulator += destinationCollection.getDistance(between: bestPath[v1IndexIndex], and: bestPath[v2IndexIndex])
+                distanceAccumulator += self.destinationCollection.getDistance(between: self.bestPath[v1IndexIndex], and: self.bestPath[v2IndexIndex])
 //                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v1 to start location
 //                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v2 to start location
                 
@@ -362,56 +410,56 @@ class PathFinder {
                 }
             }
             
-            if sliceStartIndexIndex != bestPath.count - 1 { // close off the last slice if we havent split up to count - 2
-                pathSlices.append((sliceStartIndexIndex, bestPath.count - 2)) // careful to account for going back to 0
+            if sliceStartIndexIndex != self.bestPath.count - 1 { // close off the last slice if we havent split up to count - 2
+                pathSlices.append((sliceStartIndexIndex, self.bestPath.count - 2)) // careful to account for going back to 0
             }
             
             // step 1: generate path
             // index-index pairs -> subpath index subarray slices -> arrays of mapItem arrays without RTH
-            let subpathSlices = pathSlices.map { bestPath[$0.0..<$0.1] }
+            let subpathSlices = pathSlices.map { self.bestPath[$0.0..<$0.1] }
             
             // step 2: attempt to split path by cutting most distance points
-            let sortedIndices = bestPath[1..<bestPath.count-1].sorted { (a, b) -> Bool in
+            let sortedIndices = self.bestPath[1..<self.bestPath.count-1].sorted { (a, b) -> Bool in
                 // descending by distance from start
-                return destinationCollection.getDistance(between: 0, and: a) > destinationCollection.getDistance(between: 0, and: b)
+                return self.destinationCollection.getDistance(between: 0, and: a) > self.destinationCollection.getDistance(between: 0, and: b)
             }
             let verticesCutSet = Set(sortedIndices[..<numTravelers])
-            assert(destinationCollection.getDistance(between: sortedIndices[0], and: 0) > destinationCollection.getDistance(between: sortedIndices[1], and: 0))
+            assert(self.destinationCollection.getDistance(between: sortedIndices[0], and: 0) > self.destinationCollection.getDistance(between: sortedIndices[1], and: 0))
             
             // step 2.2: find places to split to generate alternative path
             var alternativeSubpathSlices = [[Int]]()
-            for i in 1..<bestPath.count - 2 {
-                if verticesCutSet.contains(bestPath[i]) { // if a very distant node, decide to either attach to next node or previous node
-                    if let prevNodeIndex = alternativeSubpathSlices.last?.last, i + 1 <= bestPath.count - 2 {
+            for i in 1..<self.bestPath.count - 2 {
+                if verticesCutSet.contains(self.bestPath[i]) { // if a very distant node, decide to either attach to next node or previous node
+                    if let prevNodeIndex = alternativeSubpathSlices.last?.last, i + 1 <= self.bestPath.count - 2 {
                         // case where we have a previous and next node
-                        let nextNodeIndex = bestPath[i+1]
-                        if destinationCollection.getDistance(between: prevNodeIndex, and: bestPath[i]) < destinationCollection.getDistance(between: bestPath[i], and: nextNodeIndex) {
+                        let nextNodeIndex = self.bestPath[i+1]
+                        if self.destinationCollection.getDistance(between: prevNodeIndex, and: self.bestPath[i]) < self.destinationCollection.getDistance(between: self.bestPath[i], and: nextNodeIndex) {
                             // better to connect to previous node and form a new sequence
-                            alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(bestPath[i])
+                            alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(self.bestPath[i])
                             alternativeSubpathSlices.append([]) // then append empty array for next node to be added to
                         } else {
                             // better to connect to next node in a new sequence
-                            alternativeSubpathSlices.append([bestPath[i]])
+                            alternativeSubpathSlices.append([self.bestPath[i]])
                         }
                     } else if let _ = alternativeSubpathSlices.last?.last {
                         // case where we only have a previous node
                         // this means that this is the last node, and should be the only one visited by the last traveler
-                        alternativeSubpathSlices.append([bestPath[i]])
-                    } else if i + 1 <= bestPath.count - 2 {
+                        alternativeSubpathSlices.append([self.bestPath[i]])
+                    } else if i + 1 <= self.bestPath.count - 2 {
                         // case where we have a next node and not a previous node
                         // hmmmmmmm maybe just isolate it from the rest?
                         // TODO: consider changing this behavior
-                        alternativeSubpathSlices.append([bestPath[i]])
+                        alternativeSubpathSlices.append([self.bestPath[i]])
                         alternativeSubpathSlices.append([])
                     } else {
                         // case where we dont have a previous or next node. Simply append
-                        alternativeSubpathSlices.append([bestPath[i]])
+                        alternativeSubpathSlices.append([self.bestPath[i]])
                     }
                 } else {
                     if alternativeSubpathSlices.isEmpty {
-                        alternativeSubpathSlices.append([bestPath[i]])
+                        alternativeSubpathSlices.append([self.bestPath[i]])
                     } else {
-                        alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(bestPath[i])
+                        alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(self.bestPath[i])
                     }
                 }
             }
@@ -420,9 +468,9 @@ class PathFinder {
             print(alternativeSubpathSlices)
             assert(alternativeSubpathSlices.count == numTravelers)
             assert(pathSlices.count == numTravelers)
-            assert(subpathSlices.reduce(0) { $0 + $1.count } == destinationCollection.count,
+            assert(subpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count,
                    "incorrect destination count in pathSlices")
-            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == destinationCollection.count,
+            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count,
                    "incorrect destination count in alternativeSubpathSlices")
 
                         
@@ -431,29 +479,29 @@ class PathFinder {
             let alternativeReconnectedSubpathLength = alternativeSubpathSlices.map { slice -> Double in
                 var sum: Double = 0.0
                 for i in 0..<slice.count - 1 {
-                    sum += destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
+                    sum += self.destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
                 }
-                sum += destinationCollection.getDistance(between: slice[0], and: 0)
-                sum += destinationCollection.getDistance(between: slice.last!, and: 0)
+                sum += self.destinationCollection.getDistance(between: slice[0], and: 0)
+                sum += self.destinationCollection.getDistance(between: slice.last!, and: 0)
                 return sum
             }.reduce(0.0) { $0 + $1 }
             
             let reconnectedSubpathLength = subpathSlices.map { slice -> Double in
                 var sum: Double = 0.0
                 for i in 0..<slice.count - 1 {
-                    sum += destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
+                    sum += self.destinationCollection.getDistance(between: slice[i], and: slice[i + 1])
                 }
-                sum += destinationCollection.getDistance(between: slice[0], and: 0)
-                sum += destinationCollection.getDistance(between: slice.last!, and: 0)
+                sum += self.destinationCollection.getDistance(between: slice[0], and: 0)
+                sum += self.destinationCollection.getDistance(between: slice.last!, and: 0)
                 return sum
             }.reduce(0.0) { $0 + $1 }
             
             var subpathsOutput = [[MKMapItem]]() // should not include connections back to start (0 - ... - 0)
             // if better to take our heuristic-generated split, use it
             if alternativeReconnectedSubpathLength < reconnectedSubpathLength {
-                subpathsOutput = alternativeSubpathSlices.map { $0.map { destinationCollection[$0] } }
+                subpathsOutput = alternativeSubpathSlices.map { $0.map { self.destinationCollection[$0] } }
             } else {
-                subpathsOutput = subpathSlices.map { $0.map { destinationCollection[$0] } }
+                subpathsOutput = subpathSlices.map { $0.map { self.destinationCollection[$0] } }
             }
             
             // call completion handler with our mapitem subpaths
@@ -467,7 +515,21 @@ class PathFinder {
         }
         return -1
     }
-
+    
+    // MARK: - Task percentage progress
+    
+    // allow ui code to set a handler to get completion-percentage updates
+    // note: there is NO GUARANTEE that the percentage will be updated all the way up to 100%
+    var currentTaskProgressUpdateHandler: ((Float) -> Void)? = nil
+    var currentTaskProgress: Float = 0.0 {
+        didSet {
+            currentTaskProgressUpdateHandler?(currentTaskProgress)
+        }
+    }
+    func setProgressPercentageUpdateHandler(handler: @escaping (Float) -> Void) {
+        currentTaskProgress = 0.0 // do not set numerator or denominator here, as a task may be in progress when this is called
+        currentTaskProgressUpdateHandler = handler
+    }
     
     // MARK: - Private Member Functions
     
@@ -480,10 +542,10 @@ class PathFinder {
 //        return distanceMatrix[large][small]
 //    }
     
-    public func threadSafeDistanceForUserIndices(_ a: Int, _ b: Int) -> Double {
-        waitOnIncompleteJobs() // wait since we might still be adding the index
-        return destinationCollection.getDistance(between: a, and: b)
-    }
+//    public func threadSafeDistanceForUserIndices(_ a: Int, _ b: Int) -> Double {
+//        notifyOnRequestCompletion(completion: <#() -> Void#>) // wait since we might still be adding the index
+//        return destinationCollection.getDistance(between: a, and: b)
+//    }
     
     // meters
     public func longestCheckpointDistance() -> Double {
@@ -503,7 +565,9 @@ class PathFinder {
     }
     
     private func computePathUpperBound() {
+        print("START fasttsp")
         // TODO: make this work after proving that generatePermutations works
+        /*
         bestPath = Array(0..<destinationCollection.count)
         bestPathDistance = 0.0
         for i in 0..<(bestPath.count - 1) {
@@ -511,6 +575,79 @@ class PathFinder {
         }
         // connect end to beginning
         bestPathDistance += destinationCollection.getDistance(between: bestPath[0], and: bestPath[bestPath.count - 1])
+        
+        */
+        
+        var partialPath: [Int] = []
+        partialPath.reserveCapacity(destinationCollection.count)
+        let arbitraryStartIndex = 0 // arbitrarily pick start node
+        
+        // make start of partial path by adding closest vertex to start
+        var minStartPairWeight = Double.infinity
+        var minStartPairIndex = 0
+        for i in 1..<destinationCollection.count {
+            let testWeight = destinationCollection.getDistance(between: i, and: arbitraryStartIndex)
+            if testWeight < minStartPairWeight {
+                minStartPairIndex = i
+                minStartPairWeight = testWeight
+            }
+        }
+        
+        // have partial path ready
+        partialPath.append(arbitraryStartIndex)
+        partialPath.append(minStartPairIndex)
+        
+        // repeatedly add arbitrary vertex k while minimizing C_ik + C_kj - C_ij
+        // i can start from index 0, and only consider a vertex if its not the
+        // arbitrary start, or the minstartindex
+        for k in 0..<destinationCollection.count {
+            if k == arbitraryStartIndex || k == minStartPairIndex { continue }
+            
+            // find an adj pair of indices in our partialPath vertex that minimizes the above cost function
+            var bestSpliceWeight = Double.infinity
+            var leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: k)
+            var rightWeight: Double = 0
+            var leftIndex = 0
+            
+            for partialIndex in 0..<(partialPath.count - 1) {
+                if partialIndex == k { continue}
+                
+                let originalCost = destinationCollection.getDistance(between: partialPath[partialIndex], and: partialPath[partialIndex + 1])
+                // no need to update left and right repetitively
+                rightWeight = destinationCollection.getDistance(between: partialPath[partialIndex + 1], and: k)
+                
+                // now consider the new potential cost of inserting between
+                // partialPath[partialIndex] and partialPath[partialIndex + 1]
+                let saved = leftWeight + rightWeight - originalCost
+                if saved < bestSpliceWeight {
+                    leftIndex = partialIndex
+                    bestSpliceWeight = saved
+                }
+                
+                // updated for next loop iteration
+                leftWeight = rightWeight
+            }
+            
+            leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: k)
+            rightWeight = destinationCollection.getDistance(between: partialPath.last!, and: k)
+            // consider attaching to tip
+            let endConnectionLength = destinationCollection.getDistance(between: partialPath.first!, and: partialPath.last!)
+            if leftWeight + rightWeight - endConnectionLength < bestSpliceWeight {
+                partialPath.append(k)
+            } else { // otherwise, attach to an intermediate index
+                partialPath.insert(k, at: leftIndex + 1)
+            }
+        }
+        
+        var weightSum = 0.0
+        // now sum up weigt
+        for i in 0..<(destinationCollection.count - 1) {
+            weightSum += destinationCollection.getDistance(between: partialPath[i], and: partialPath[i + 1])
+        }
+        weightSum += destinationCollection.getDistance(between: partialPath.first!, and: partialPath.last!)
+        bestPathDistance = weightSum
+        bestPath = partialPath
+        print("END fasttsp")
     }
     
     private func generatePermutations(permLength: Int, growingDistance: Double) {
@@ -518,6 +655,15 @@ class PathFinder {
         if growingDistance > bestPathDistance {
             print("cutting out this permutation!")
             return
+        }
+        
+        if permLength == permCheckDepth {
+            taskProgressNumerator += 1
+            let oldPercent = currentTaskProgress
+            let newPercent = Float(self.taskProgressNumerator) / Float(self.taskProgressDenominator)
+            if newPercent - oldPercent > 0.01 {
+                currentTaskProgress = newPercent
+            }
         }
         
         if permLength == permutation.count {
@@ -532,9 +678,9 @@ class PathFinder {
         }
         
         // TODO: test promising, though time isnt an issue for a couple destinations
-//        if !promising(permLength, growingDistance) {
-//            return
-//        }
+        if !promising(permLength, growingDistance) {
+            return
+        }
         
         for i in permLength..<permutation.count {
             permutation.swapAt(permLength, i)
@@ -596,8 +742,14 @@ class PathFinder {
     // tell whether adding the count - permLength nodes can possibly produce an optimal path
     private func promising(_ permLength: Int, _ pathDistance: Double) -> Bool {
         // compute MST on remaining vertices
-        if permLength >= permutation.count - 3 { return true }// TODO: make this bound larger to avoid wasting time on MST when we just have a few points
+//        if permLength >= permutation.count - 3 { return true }// TODO: make this bound larger to avoid wasting time on MST when we just have a few points
+        
         primData.reserveCapacity(permutation.count) // wont ever need more than this amount
+        for i in 0..<primData.count { // reset all entries (could change to only change from permLength)
+            primData[i].visited = false
+            primData[i].parentIndex = -1
+            primData[i].minimalWeight = Double.infinity
+        }
         while primData.count < permutation.count { // most time optimal to keep equal to size of permutation
             primData.append(PrimDatum())
         }
@@ -607,15 +759,13 @@ class PathFinder {
         let mstCount = permutation.count - permLength
         var mstWeight = 0.0
         
-        for i in 0..<mstCount { // reset entries we care about
-            primData[i].visited = false
-            primData[i].parentIndex = -1
-            primData[i].minimalWeight = Double.infinity
-        }
+        // start at first coordinate
+        primData[permLength].visited = true
+        primData[permLength].minimalWeight = 0
                 
         while numVisited < mstCount {
             // minimize weights of newly available edges
-            for i in permLength..<mstCount {
+            for i in permLength..<permutation.count {
                 if primData[i].visited { continue }
                 let dist = destinationCollection.getDistance(between: permutation[i], and: permutation[currentVertex])
                 if dist < primData[i].minimalWeight {
@@ -626,7 +776,7 @@ class PathFinder {
             
             // visit next unvisited vertex with lowest edge weight
             var minUnvisitedWeight = Double.infinity
-            for v in (permLength+1)..<mstCount {
+            for v in (permLength+1)..<primData.count {
                 if !primData[v].visited {
                     if primData[v].minimalWeight < minUnvisitedWeight {
                         currentVertex = v
@@ -636,7 +786,7 @@ class PathFinder {
             }
             
             mstWeight += primData[currentVertex].minimalWeight
-            if mstWeight + pathDistance > bestPathDistance {
+            if mstWeight > bestPathDistance {
                 return false // consider early exit
             }
             primData[currentVertex].visited = true
@@ -645,7 +795,7 @@ class PathFinder {
         
         var minLeftEdge = Double.infinity
         var minRightEdge = Double.infinity
-        for i in permLength..<mstCount {
+        for i in permLength..<permutation.count {
             let leftDist = destinationCollection.getDistance(between: permutation[0], and: permutation[i])
             let rightDist = destinationCollection.getDistance(between: permutation[permLength - 1], and: permutation[i])
             if leftDist < minLeftEdge {
@@ -656,9 +806,10 @@ class PathFinder {
             }
         }
         
+        print(permLength, " mst total weight = ", minLeftEdge + minRightEdge + mstWeight + pathDistance, "path part: ", pathDistance)
         return minLeftEdge + minRightEdge + mstWeight + pathDistance < bestPathDistance
     }
-    
+
     // Locations helpers
     func computeMapItem(for coordinate: CLLocationCoordinate2D, completion: @escaping (MKMapItem?) -> ()) {
         let x = CLGeocoder()
