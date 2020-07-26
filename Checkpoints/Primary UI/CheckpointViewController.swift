@@ -27,6 +27,7 @@ class CheckpointViewController: UIViewController, StatefulViewController {
     @IBOutlet weak var distanceLabel: UILabel!
     @IBOutlet weak var makeStartButton: UIButton!
     
+    @IBOutlet weak var mainStack: UIStackView!
     @IBOutlet weak var existingCheckpointButtonsStack: UIStackView!
     
     var mapItem: MKMapItem
@@ -102,17 +103,6 @@ class CheckpointViewController: UIViewController, StatefulViewController {
         }
         
         updateSetStartButton()
-        print("CHECKPOINT VIEW DID LOAD")
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        print("CHECKPINT VIEW WILL APPEAR")
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        print("CHECKPOINT VIEW DID APPEAR")
     }
     
     func updateSetStartButton() {

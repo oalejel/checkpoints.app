@@ -49,7 +49,6 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
     private let searchViewController = SearchViewController(showsCloseAction: false)
     private let mapsViewController = MapsViewController()
     
-    
     var state: UserState = .Searching {
         didSet {
             print("NEW STATE: \(String(describing: state))")
@@ -108,11 +107,20 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
 }
 
 extension MainViewController: OverlayNavigationViewControllerDelegate {
-    func overlayNavigationViewControllerDidPopViewController(_ navigationController: OverlayNavigationViewController, animated: Bool) {
-        // adjust state depending on type of view controller
-        if let stateful = navigationController.topViewController as? StatefulViewController {
-            state = stateful.getUserState()
+    func overlayNavigationViewControllerWillShowViewController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+        if let vc = viewController as? StatefulViewController {
+            state = vc.getUserState()
         }
+    }
+    
+    
+    func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
+    }
+//    func overlayNavigationViewControllerDidPopViewController(_ navigationController: OverlayNavigationViewController, animated: Bool) {
+//        // adjust state depending on type of view controller
+//        if let stateful = navigationController.topViewController as? StatefulViewController {
+//            state = stateful.getUserState()
+//        }
 //        if navigationController.topViewController is SearchViewController {
 //            state = .Searching
 //        } else if navigationController.topViewController is CheckpointViewController {
@@ -120,7 +128,7 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 //        } else if navigationController.topViewController is RouteConfigController {
 //            state = .
 //        }
-    }
+//    }
     
 //    override func popViewController(animated: Bool) -> UIViewController? {
 //        let v = super.popViewController(animated: animated)
@@ -130,11 +138,11 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 //        return v
 //    }
     
-    func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
-        
-        if let vc = viewController as? StatefulViewController {
-            state = vc.getUserState()
-        }
+//    func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
+//
+//        if let vc = viewController as? StatefulViewController {
+//            state = vc.getUserState()
+//        }
         
         // move down for route stuff
 //        if case let UserState.Routing(customHeight) = state, viewController is RouteConfigController || viewController is RouteResultViewController {
@@ -150,7 +158,7 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 //        } else if state == .PreviewCheckpoint, let vc = viewController as? StatefulViewController {
 //            state = vc.getUserState()
 //        }
-    }
+//    }
     
 }
 
@@ -330,9 +338,9 @@ extension MainViewController: LocationsDelegate {
 //        cvc.view.layoutIfNeeded()
 //        let instrinsic = cvc.view.intrinsicContentSize
 //        print(instrinsic)
-        cvc.view.sizeToFit()
+//        cvc.view.sizeToFit()
         print(cvc.view.frame)
-
+        
         
 //        state = .PreviewCheckpoint
         overlayNavigationController.push(cvc, animated: true)
@@ -414,62 +422,24 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             return fractionalNotchHeights(for: notch, availableSpace: availableSpace)
         case .PreviewCheckpoint:
             guard let overlay = containerViewController.topViewController else { return 0 }
-            overlay.view.setNeedsLayout()
-            overlay.view.layoutIfNeeded()
-            return overlay.view.frame.size.height
-//            guard let overlay = containerViewController.topViewController else { return 0 }
-            
-//            // generate constraints without the enclosed view constraints
+            if let topOfOverlay = overlay.children.first?.children.last {
+                
+                topOfOverlay.view.setNeedsLayout()
+                topOfOverlay.view.layoutIfNeeded()
 
-//            overlay.view.translatesAutoresizingMaskIntoConstraints = false
-//            overlay.view.setNeedsLayout()
-//            overlay.view.layoutIfNeeded()
+                let targetWidth = topOfOverlay.view.bounds.width
+                let targetSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+                let computedSize = topOfOverlay.view.systemLayoutSizeFitting(
+                    targetSize,
+                    withHorizontalFittingPriority: .required,
+                    verticalFittingPriority: .fittingSizeLevel
+                )
+                print(computedSize.height)
+                return computedSize.height
+            }
             
+            return 0
             
-            
-//            let otherVC = CheckpointViewController(mapItem: MKMapItem(), alreadyAdded: false, showActions: true)
-//            otherVC.view.setNeedsLayout()
-//            otherVC.view.layoutIfNeeded()
-//
-//            print(overlay.view.constraints)
-//            let constraints = overlay.view.constraints.filter { (c) -> Bool in
-//                return c.identifier?.contains("encaps") ?? false
-//            }
-//
-//            print(otherVC.view.frame)
-//            return otherVC.view.frame.size.height
-            
-            
-            
-            
-            
-//            let h = containerViewController.view.frame.size.height
-//            let targetWidth = containerViewController.view.frame.size.width
-//            let targetSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
-//            let computedSize = overlay.view.systemLayoutSizeFitting(
-//                targetSize,
-//                withHorizontalFittingPriority: .required,
-//                verticalFittingPriority: .fittingSizeLevel
-//            )
-//            print(overlay.view.constraints)
-//            let constraints = overlay.view.constraints.filter { (c) -> Bool in
-//                return c.identifier?.contains("encaps") ?? false
-//            }
-//
-//            print("old height: \(h), computed height: \(computedSize.height)")
-//            return computedSize.height
-            
-//            let x1 = overlay.view.frame.size
-//            let currentSize = overlay.view.bounds.size
-//
-//            var w = overlay.view.frame.size
-//            w.height = 500
-//            let x = view.sizeThatFits(w)
-//            print("chosen height: ", w.height)
-//            return w.height
-//            return overlayNavigationController.topViewController!.view.frame.size.height - 124 // TODO: fix this for all screens
-//        case .CustomHeight(let frameHeight):
-//            return frameHeight
         case .Routing(let optionalHeights):
             if optionalHeights.count > index {
                 return optionalHeights[index]

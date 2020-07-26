@@ -13,7 +13,9 @@ protocol OverlayNavigationViewControllerDelegate: AnyObject {
                                          didShow viewController: UIViewController,
                                          animated: Bool)
     
-    func overlayNavigationViewControllerDidPopViewController(_ navigationController: OverlayNavigationViewController, animated: Bool)
+//    func overlayNavigationViewControllerDidPopViewController(_ navigationController: OverlayNavigationViewController, animated: Bool)
+    
+    func overlayNavigationViewControllerWillShowViewController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool)
 }
 
 class OverlayNavigationViewController: UIViewController {
@@ -41,7 +43,7 @@ class OverlayNavigationViewController: UIViewController {
 
     func popViewController(animated: Bool) {
         underlyingNavigationController.popViewController(animated: animated)
-        delegate?.overlayNavigationViewControllerDidPopViewController(self, animated: animated)
+//        delegate?.overlayNavigationViewControllerDidPopViewController(self, animated: animated)
     }
 
     func popToRootViewController(animated: Bool) {
@@ -66,6 +68,10 @@ extension OverlayNavigationViewController: UINavigationControllerDelegate {
                               from fromVC: UIViewController,
                               to toVC: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         return OverlayNavigationAnimationController(operation: operation)
+    }
+    
+    func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+        delegate?.overlayNavigationViewControllerWillShowViewController(navigationController, willShow: viewController, animated: animated)
     }
 
     func navigationController(_ navigationController: UINavigationController,
