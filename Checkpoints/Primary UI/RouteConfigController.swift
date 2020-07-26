@@ -12,8 +12,8 @@ import MapKit
 protocol RouteConfigDelegate {
     func cancellingRouteConfiguration() // good in case we want to modify map
     func previewMST()
-    func showNumberedAnnotations(orderedMapItems: [MKMapItem])
-    func showPinAnnotations(unorderedMapItems: [MKMapItem])
+    func showNumberedAnnotations(pathIndices: [Int])
+    func showPinAnnotations()
 }
 
 class RouteConfigController: UIViewController, StatefulViewController {

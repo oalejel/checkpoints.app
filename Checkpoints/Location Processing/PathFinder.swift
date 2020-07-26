@@ -244,8 +244,8 @@ class PathFinder {
             for colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
                 assert(mapItem != self.destinationCollection[colIndex]) // catch an old bug where same location was added
                 let request = MKDirections.Request()
-                request.source = self.destinationCollection[colIndex]
-                request.destination = mapItem
+                request.source = mapItem
+                request.destination = self.destinationCollection[colIndex]
                 request.requestsAlternateRoutes = false
                 request.transportType = .automobile
                 let directions = MKDirections(request: request)
@@ -257,7 +257,18 @@ class PathFinder {
                     guard let etaResponse = etaResponse else {
                         print(error ?? "Unknown error trying to compute ETA")
                         // TODO: tell someone that this failed and rollback changes....
-                        fatalError("FATAL: find way to handle case where eta cant be computed")
+                        
+                        // case 1: too many requests made at one time, start a timer to repeat the request
+                        if let mapError = error as? MKError,
+                            let geoErrorDict = mapError.errorUserInfo["MKErrorGEOErrorUserInfo"] as? [String : Any],
+                            let underError = geoErrorDict["NSUnderlyingError"] as? NSError,
+                            let resetTime = underError.userInfo["timeUntilReset"] as? NSNumber {
+                                print(resetTime)
+                        } else { // case 2? catch issue where destination is impossible to find directions to (like middle of ocean)
+                            fatalError("FATAL: find way to handle case where eta cant be computed")
+                        }
+                            
+                        
                         return
                     }
                     
@@ -319,7 +330,7 @@ class PathFinder {
     
     // warning: may want to add a progress update closure to give updates to the progress of the computation
     var permCheckDepth = 0 // depth at which to increment our branch progress count
-    func computeIndividualOptimalPath(completion: @escaping (([MKMapItem]) -> Void)) {
+    func computeIndividualOptimalPath(completion: @escaping (([Int]) -> Void)) {
         DispatchQueue.global(qos: .userInitiated).async {
             assert(self.destinationCollection.count > 1)
             self.computePathUpperBound()
@@ -334,7 +345,8 @@ class PathFinder {
             self.generatePermutations(permLength: 1, growingDistance: 0.0)
             
             print("best permutation (user indices): ", self.bestPath)
-            completion(self.self.bestPath.map { self.destinationCollection[$0] })
+//            completion(self.self.bestPath.map { self.destinationCollection[$0] })
+            completion(self.bestPath)
         }
     }
     

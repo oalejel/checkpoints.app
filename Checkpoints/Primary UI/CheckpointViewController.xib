@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="16097" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="16097.2" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
@@ -23,18 +23,18 @@
             </connections>
         </placeholder>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
-        <view clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="i5M-Pr-FkT">
-            <rect key="frame" x="0.0" y="0.0" width="414" height="485"/>
+        <view autoresizesSubviews="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="i5M-Pr-FkT">
+            <rect key="frame" x="0.0" y="0.0" width="460" height="450"/>
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
-                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" verticalHuggingPriority="252" text="Location Name here" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="2wT-x8-r6M">
+                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" verticalHuggingPriority="258" verticalCompressionResistancePriority="751" text="Location Name here" lineBreakMode="wordWrap" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="2wT-x8-r6M">
                     <rect key="frame" x="16" y="16" width="203" height="67"/>
                     <fontDescription key="fontDescription" name="HelveticaNeue-Bold" family="Helvetica Neue" pointSize="28"/>
                     <nil key="textColor"/>
                     <nil key="highlightedColor"/>
                 </label>
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="WKi-yT-ZOO" customClass="CloseButton" customModule="Checkpoints" customModuleProvider="target">
-                    <rect key="frame" x="368" y="34.5" width="30" height="30"/>
+                    <rect key="frame" x="414" y="34.5" width="30" height="30"/>
                     <color key="backgroundColor" systemColor="systemBlueColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     <constraints>
                         <constraint firstAttribute="height" constant="30" id="iIz-7l-pmi"/>
@@ -46,10 +46,10 @@
                     </connections>
                 </button>
                 <stackView opaque="NO" contentMode="scaleToFill" axis="vertical" alignment="top" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="OCq-aq-0KY">
-                    <rect key="frame" x="16" y="97" width="382" height="312"/>
+                    <rect key="frame" x="16" y="97" width="428" height="319"/>
                     <subviews>
                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="YCE-p8-BIc">
-                            <rect key="frame" x="0.0" y="0.0" width="382" height="58"/>
+                            <rect key="frame" x="0.0" y="0.0" width="428" height="58"/>
                             <color key="backgroundColor" systemColor="systemBlueColor" red="0.0" green="0.47843137250000001" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="58" id="46v-vr-Jcp"/>
@@ -63,10 +63,10 @@
                             </connections>
                         </button>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="fillEqually" alignment="top" spacing="16" translatesAutoresizingMaskIntoConstraints="NO" id="xaZ-1L-JkE">
-                            <rect key="frame" x="0.0" y="74" width="382" height="58"/>
+                            <rect key="frame" x="0.0" y="74" width="428" height="58"/>
                             <subviews>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Mfv-nE-5eC">
-                                    <rect key="frame" x="0.0" y="0.0" width="183" height="58"/>
+                                    <rect key="frame" x="0.0" y="0.0" width="206" height="58"/>
                                     <color key="backgroundColor" systemColor="systemRedColor" red="1" green="0.23137254900000001" blue="0.18823529410000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
                                     <state key="normal" title="Remove">
@@ -77,7 +77,7 @@
                                     </connections>
                                 </button>
                                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="odM-od-roY">
-                                    <rect key="frame" x="199" y="0.0" width="183" height="58"/>
+                                    <rect key="frame" x="222" y="0.0" width="206" height="58"/>
                                     <color key="backgroundColor" systemColor="systemGray4Color" red="0.81960784310000001" green="0.81960784310000001" blue="0.83921568629999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                     <fontDescription key="fontDescription" style="UICTFontTextStyleHeadline"/>
                                     <state key="normal" title="Start Here">
@@ -94,7 +94,7 @@
                             </constraints>
                         </stackView>
                         <stackView opaque="NO" contentMode="scaleToFill" distribution="fillProportionally" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="zKg-Mh-iF9">
-                            <rect key="frame" x="0.0" y="148" width="382" height="61"/>
+                            <rect key="frame" x="0.0" y="148" width="428" height="61"/>
                             <subviews>
                                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="mappin.and.ellipse" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="a2S-Kf-zJO">
                                     <rect key="frame" x="0.0" y="-0.5" width="24" height="20.5"/>
@@ -104,8 +104,8 @@
                                         <constraint firstAttribute="width" constant="24" id="Ta9-8V-Zmt"/>
                                     </constraints>
                                 </imageView>
-                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="252" text="Apple Park 1 Apple Way Cupertino, Calfiornia, USA" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="wtT-Y9-JU5">
-                                    <rect key="frame" x="32" y="0.0" width="350" height="61"/>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="256" verticalCompressionResistancePriority="752" text="Apple Park 1 Apple Way Cupertino, Calfiornia, USA" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="wtT-Y9-JU5">
+                                    <rect key="frame" x="32" y="0.0" width="396" height="61"/>
                                     <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                     <nil key="textColor"/>
                                     <nil key="highlightedColor"/>
@@ -115,24 +115,24 @@
                                 <constraint firstItem="wtT-Y9-JU5" firstAttribute="height" secondItem="zKg-Mh-iF9" secondAttribute="height" id="ZR3-O2-VLf"/>
                             </constraints>
                         </stackView>
-                        <stackView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="253" verticalHuggingPriority="252" verticalCompressionResistancePriority="753" distribution="fillProportionally" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="iv0-G3-nSq">
-                            <rect key="frame" x="0.0" y="225" width="382" height="41"/>
+                        <stackView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="253" verticalHuggingPriority="254" verticalCompressionResistancePriority="753" distribution="fillProportionally" alignment="top" spacing="8" translatesAutoresizingMaskIntoConstraints="NO" id="iv0-G3-nSq">
+                            <rect key="frame" x="0.0" y="225" width="428" height="41"/>
                             <subviews>
                                 <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="car" catalog="system" translatesAutoresizingMaskIntoConstraints="NO" id="mAz-fC-ie5">
-                                    <rect key="frame" x="0.0" y="1.5" width="29.5" height="17.5"/>
+                                    <rect key="frame" x="0.0" y="1.5" width="33" height="17.5"/>
                                     <color key="tintColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 </imageView>
-                                <stackView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="252" verticalCompressionResistancePriority="752" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="m6e-Do-aJb">
-                                    <rect key="frame" x="37.5" y="0.0" width="344.5" height="41"/>
+                                <stackView opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="256" verticalCompressionResistancePriority="754" axis="vertical" translatesAutoresizingMaskIntoConstraints="NO" id="m6e-Do-aJb">
+                                    <rect key="frame" x="41" y="0.0" width="387" height="41"/>
                                     <subviews>
-                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="252" text="About 1.4 mi from current location" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="DFw-A0-GaL">
-                                            <rect key="frame" x="0.0" y="0.0" width="344.5" height="20.5"/>
+                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="256" text="About 1.4 mi from current location" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="DFw-A0-GaL">
+                                            <rect key="frame" x="0.0" y="0.0" width="387" height="20.5"/>
                                             <fontDescription key="fontDescription" type="boldSystem" pointSize="17"/>
                                             <nil key="textColor"/>
                                             <nil key="highlightedColor"/>
                                         </label>
-                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="252" text="Traffic distances are calculated later" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="WBt-zl-0Pz">
-                                            <rect key="frame" x="0.0" y="20.5" width="344.5" height="20.5"/>
+                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="255" text="Traffic distances are calculated later" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="WBt-zl-0Pz">
+                                            <rect key="frame" x="0.0" y="20.5" width="387" height="20.5"/>
                                             <fontDescription key="fontDescription" type="system" pointSize="17"/>
                                             <color key="textColor" systemColor="secondaryLabelColor" red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
                                             <nil key="highlightedColor"/>
@@ -145,7 +145,7 @@
                             </constraints>
                         </stackView>
                         <button opaque="NO" contentMode="scaleToFill" verticalHuggingPriority="248" verticalCompressionResistancePriority="748" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="kci-35-Jmz">
-                            <rect key="frame" x="0.0" y="282" width="382" height="30"/>
+                            <rect key="frame" x="0.0" y="282" width="428" height="37"/>
                             <state key="normal" title="Focus on Map"/>
                             <connections>
                                 <action selector="focusPressed:" destination="-1" eventType="touchUpInside" id="iPY-fw-FL4"/>
@@ -165,6 +165,7 @@
             <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
             <constraints>
                 <constraint firstItem="OCq-aq-0KY" firstAttribute="top" secondItem="2wT-x8-r6M" secondAttribute="bottom" constant="14" id="8EN-Lx-1Zj"/>
+                <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="OCq-aq-0KY" secondAttribute="bottom" id="J5l-dw-MNw"/>
                 <constraint firstItem="WKi-yT-ZOO" firstAttribute="centerY" secondItem="2wT-x8-r6M" secondAttribute="centerY" id="Og2-31-D1g"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="OCq-aq-0KY" secondAttribute="trailing" constant="16" id="Q8R-Q4-srC"/>
                 <constraint firstItem="WKi-yT-ZOO" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="2wT-x8-r6M" secondAttribute="trailing" constant="8" id="ShJ-1I-ZCz"/>
@@ -177,7 +178,7 @@
             <nil key="simulatedBottomBarMetrics"/>
             <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
             <viewLayoutGuide key="safeArea" id="fnl-2z-Ty3"/>
-            <point key="canvasLocation" x="140.57971014492756" y="394.75446428571428"/>
+            <point key="canvasLocation" x="121.73913043478262" y="383.03571428571428"/>
         </view>
     </objects>
     <resources>

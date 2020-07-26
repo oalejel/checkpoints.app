@@ -122,16 +122,35 @@ extension MainViewController: OverlayNavigationViewControllerDelegate {
 //        }
     }
     
+//    override func popViewController(animated: Bool) -> UIViewController? {
+//        let v = super.popViewController(animated: animated)
+//        if let stateful = navigationController?.topViewController as? StatefulViewController {
+//            state = stateful.getUserState()
+//        }
+//        return v
+//    }
+    
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
         
-        if state != .Searching && viewController is SearchViewController {
-            state = .Searching
-        } else if case let UserState.Routing(customHeight) = state, viewController is RouteConfigController || viewController is RouteResultViewController {
-            overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
-            state = .Routing(customHeight)
+        if let vc = viewController as? StatefulViewController {
+            state = vc.getUserState()
         }
+        
+        // move down for route stuff
+//        if case let UserState.Routing(customHeight) = state, viewController is RouteConfigController || viewController is RouteResultViewController {
+//            overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+//            state = .Routing(customHeight)
+//        }
+        
+//        if state != .Searching && viewController is SearchViewController {
+//            state = .Searching
+//        } else if case let UserState.Routing(customHeight) = state, viewController is RouteConfigController || viewController is RouteResultViewController {
+//            overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+//            state = .Routing(customHeight)
+//        } else if state == .PreviewCheckpoint, let vc = viewController as? StatefulViewController {
+//            state = vc.getUserState()
+//        }
     }
-    
     
 }
 
@@ -147,6 +166,13 @@ extension MainViewController: SearchViewControllerDelegate {
             }
         } else { // temporarily show the pin on the map
             let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded, showActions: true)
+            // force the view to generate its layout constraints
+            cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: searchViewController.view.frame.size.width))
+            cvc.view.setNeedsLayout()
+            cvc.view.layoutIfNeeded()
+            
+            print(cvc.view.frame)
+            
             cvc.delegate = self
             overlayNavigationController.push(cvc, animated: true)
             mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
@@ -175,7 +201,7 @@ extension MainViewController: SearchViewControllerDelegate {
 
 extension MainViewController: LocationsDelegate {
     
-    func allowEditingPins() -> Bool {
+    func attemptAllowEditingPins() -> Bool {
         switch state {
         case .Searching, .PreviewCheckpoint:
             return true
@@ -272,7 +298,19 @@ extension MainViewController: LocationsDelegate {
         
         let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: true, showActions: showActions)
         cvc.delegate = self
-        state = .PreviewCheckpoint
+        
+        
+        // force the view to generate its layout constraints
+//        cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: searchViewController.view.frame.size.width))
+        cvc.view.setNeedsLayout()
+        cvc.view.layoutIfNeeded()
+        cvc.view.sizeToFit()
+        print(cvc.view.frame)
+        
+        
+        
+        
+//        state = .PreviewCheckpoint
         searchViewController.selectedMapItem = mapItem
         overlayNavigationController.push(cvc, animated: true)
     }
@@ -284,7 +322,19 @@ extension MainViewController: LocationsDelegate {
     func manualPinPlaced(for mapItem: MKMapItem) {
         let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: false, showActions: true)
         cvc.delegate = self
-        state = .PreviewCheckpoint
+        
+        
+        // force the view to generate its layout constraints
+//        cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: UIScreen.main.bounds.width))
+//        cvc.view.setNeedsLayout()
+//        cvc.view.layoutIfNeeded()
+//        let instrinsic = cvc.view.intrinsicContentSize
+//        print(instrinsic)
+        cvc.view.sizeToFit()
+        print(cvc.view.frame)
+
+        
+//        state = .PreviewCheckpoint
         overlayNavigationController.push(cvc, animated: true)
         // temporarily show the pin on the map
         mapsViewController.showPendingPin(mapItem: mapItem)
@@ -300,14 +350,14 @@ extension MainViewController: HeightAdjustmentDelegate {
 
 extension MainViewController: RouteConfigDelegate {
     
-    func showNumberedAnnotations(orderedMapItems: [MKMapItem]) {
+    func showNumberedAnnotations(pathIndices: [Int]) {
         mapsViewController.mapView.removeAnnotations(mapsViewController.mapView.annotations)
         
         var generatedAnnotations: [CheckpointAnnotation] = []
-        for i in 0..<orderedMapItems.count {
-            let item = orderedMapItems[i]
+        for stepIndex in 0..<pathIndices.count {
+            let item = PathFinder.shared.destinationCollection[pathIndices[stepIndex]]
             let ann = CheckpointAnnotation(mapItem: item)
-            ann.viewType = .Numbered(i + 1)
+            ann.viewType = .Numbered(stepIndex + 1)
             ann.title = item.placemark.name ?? item.placemark.title ?? "\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude)"
             ann.coordinate = item.placemark.coordinate
             generatedAnnotations.append(ann)
@@ -316,9 +366,9 @@ extension MainViewController: RouteConfigDelegate {
         mapsViewController.mapView.addAnnotations(generatedAnnotations)
     }
     
-    func showPinAnnotations(unorderedMapItems: [MKMapItem]) {
+    func showPinAnnotations() {
         mapsViewController.mapView.removeAnnotations(mapsViewController.mapView.annotations)
-        let generatedAnnotations = unorderedMapItems.map { item -> CheckpointAnnotation in
+        let generatedAnnotations = PathFinder.shared.destinationCollection.unsortedDestinations.map { item -> CheckpointAnnotation in
             let ann = CheckpointAnnotation(mapItem: item)
             ann.viewType = .Pin
             ann.title = item.placemark.name ?? item.placemark.title ?? "\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude)"
@@ -363,8 +413,61 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             let notch = OverlayNotch.allCases[index]
             return fractionalNotchHeights(for: notch, availableSpace: availableSpace)
         case .PreviewCheckpoint:
-//            let x = overlayNavigationController.topViewController!.view
-            return overlayNavigationController.topViewController!.view.frame.size.height - 124 // TODO: fix this for all screens
+            guard let overlay = containerViewController.topViewController else { return 0 }
+            overlay.view.setNeedsLayout()
+            overlay.view.layoutIfNeeded()
+            return overlay.view.frame.size.height
+//            guard let overlay = containerViewController.topViewController else { return 0 }
+            
+//            // generate constraints without the enclosed view constraints
+
+//            overlay.view.translatesAutoresizingMaskIntoConstraints = false
+//            overlay.view.setNeedsLayout()
+//            overlay.view.layoutIfNeeded()
+            
+            
+            
+//            let otherVC = CheckpointViewController(mapItem: MKMapItem(), alreadyAdded: false, showActions: true)
+//            otherVC.view.setNeedsLayout()
+//            otherVC.view.layoutIfNeeded()
+//
+//            print(overlay.view.constraints)
+//            let constraints = overlay.view.constraints.filter { (c) -> Bool in
+//                return c.identifier?.contains("encaps") ?? false
+//            }
+//
+//            print(otherVC.view.frame)
+//            return otherVC.view.frame.size.height
+            
+            
+            
+            
+            
+//            let h = containerViewController.view.frame.size.height
+//            let targetWidth = containerViewController.view.frame.size.width
+//            let targetSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)
+//            let computedSize = overlay.view.systemLayoutSizeFitting(
+//                targetSize,
+//                withHorizontalFittingPriority: .required,
+//                verticalFittingPriority: .fittingSizeLevel
+//            )
+//            print(overlay.view.constraints)
+//            let constraints = overlay.view.constraints.filter { (c) -> Bool in
+//                return c.identifier?.contains("encaps") ?? false
+//            }
+//
+//            print("old height: \(h), computed height: \(computedSize.height)")
+//            return computedSize.height
+            
+//            let x1 = overlay.view.frame.size
+//            let currentSize = overlay.view.bounds.size
+//
+//            var w = overlay.view.frame.size
+//            w.height = 500
+//            let x = view.sizeThatFits(w)
+//            print("chosen height: ", w.height)
+//            return w.height
+//            return overlayNavigationController.topViewController!.view.frame.size.height - 124 // TODO: fix this for all screens
 //        case .CustomHeight(let frameHeight):
 //            return frameHeight
         case .Routing(let optionalHeights):
@@ -440,5 +543,4 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
     func expandOverlay() {
         overlayController.moveOverlay(toNotchAt: OverlayNotch.maximum.rawValue, animated: true)
     }
-
 }

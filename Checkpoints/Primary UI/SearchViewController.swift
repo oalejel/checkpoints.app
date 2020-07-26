@@ -21,7 +21,11 @@ class SearchViewController: UIViewController,
     UITableViewDataSource,
     UITableViewDelegate,
     UISearchBarDelegate,
-    DetailHeaderViewDelegate {
+DetailHeaderViewDelegate, StatefulViewController {
+    
+    func getUserState() -> UserState {
+        return .Searching
+    }
     
     var searchResults = [MKMapItem]()
     var selectedMapItem: MKMapItem?
@@ -317,7 +321,6 @@ class SearchViewController: UIViewController,
 
     
     override func resignFirstResponder() -> Bool {
-        print("resigning first responder")
         let resign = super.resignFirstResponder()
         return resign && header.searchBar.resignFirstResponder()
     }

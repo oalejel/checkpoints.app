@@ -108,7 +108,7 @@
                     </constraints>
                 </stackView>
                 <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="DR2-8B-eoo">
-                    <rect key="frame" x="0.0" y="154" width="414" height="245"/>
+                    <rect key="frame" x="0.0" y="154" width="414" height="253"/>
                     <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
                 </tableView>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="Tob-vC-t5O" userLabel="Separator">
@@ -127,7 +127,7 @@
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="xxD-Mk-6eA" secondAttribute="trailing" constant="20" id="8wc-lu-ozh"/>
                 <constraint firstItem="xxD-Mk-6eA" firstAttribute="top" secondItem="Tsx-Hd-UcB" secondAttribute="bottom" constant="8" id="9El-WM-qGj"/>
                 <constraint firstItem="DR2-8B-eoo" firstAttribute="top" secondItem="Tob-vC-t5O" secondAttribute="bottom" id="BOE-yz-rM3"/>
-                <constraint firstItem="fnl-2z-Ty3" firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottomMargin" constant="8" id="HpS-BR-SlB"/>
+                <constraint firstAttribute="bottom" secondItem="DR2-8B-eoo" secondAttribute="bottomMargin" id="HpS-BR-SlB"/>
                 <constraint firstItem="yUJ-9g-eIe" firstAttribute="leading" secondItem="fnl-2z-Ty3" secondAttribute="leading" constant="20" id="NHZ-ga-iKt"/>
                 <constraint firstItem="Tob-vC-t5O" firstAttribute="top" secondItem="xxD-Mk-6eA" secondAttribute="bottom" constant="12" id="S7O-jz-cFH"/>
                 <constraint firstItem="fnl-2z-Ty3" firstAttribute="trailing" secondItem="FHu-Ph-Lv4" secondAttribute="trailing" constant="20" id="VDf-Ue-WxK"/>

@@ -95,13 +95,24 @@ class CheckpointViewController: UIViewController, StatefulViewController {
             addButton.isHidden = false
             existingCheckpointButtonsStack.isHidden = true
         }
-        
+
         // hide buttons for removing / starting here if an override is required
         if !showActions {
             existingCheckpointButtonsStack.isHidden = true
         }
         
         updateSetStartButton()
+        print("CHECKPOINT VIEW DID LOAD")
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        print("CHECKPINT VIEW WILL APPEAR")
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        print("CHECKPOINT VIEW DID APPEAR")
     }
     
     func updateSetStartButton() {

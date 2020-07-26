@@ -36,6 +36,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     
     var heldState: UserState!
     var delegate: RouteConfigDelegate!
+    var optimalRouteArray: [Int]?
     
     var finishedComputation = false // track in case we need to unhide before view appears
     
@@ -86,7 +87,8 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
 //            print("GOT OUTPUT:", routeArray)
             DispatchQueue.main.async {
                 self.finishedComputation = true
-                self.delegate.showNumberedAnnotations(orderedMapItems: routeArray)
+                self.optimalRouteArray = routeArray
+                self.delegate.showNumberedAnnotations(pathIndices: routeArray)
                 
                 // if view already appeared, we must show primary UI here
                 if self.viewWillAppearedCalled {
@@ -98,8 +100,9 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
                 let remainingMeters = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: 0)
                 self.setDistanceLabel(meters: remainingMeters)
                 
+                self.tableView.reloadData()
                 //        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
-                self.tableView(self.tableView, didSelectRowAt: IndexPath(row: self.selectedStopIndex, section: 0))
+                self.tableView.selectRow(at: IndexPath(row: self.selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
                 
                 NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
             }
@@ -180,7 +183,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     }
     
     @IBAction func closePressed(_ sender: Any) {
-        self.delegate.showPinAnnotations(unorderedMapItems: PathFinder.shared.destinationCollection.unsortedDestinations)
+        self.delegate.showPinAnnotations()
         navigationController?.popViewController(animated: true)
     }
     
@@ -203,7 +206,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
             tableView.selectRow(at: IndexPath(row: self.selectedStopIndex, section: 0), animated: true, scrollPosition: .middle)
             tableView.reloadRows(at: rowsToUpdate, with: .none)
             
-            let selectedMapItem = PathFinder.shared.destinationCollection[indexPath.row]
+            let selectedMapItem = PathFinder.shared.destinationCollection[ indexPath.row]
             
             UIView.transition(with: self.view, duration: 0.2, options: [.curveEaseInOut, .transitionCrossDissolve], animations: {
                 self.nextDestinationLabel.text = selectedMapItem.name ?? selectedMapItem.placemark.subtitle ?? "\(selectedMapItem.placemark.coordinate.latitude), \(selectedMapItem.placemark.coordinate.longitude)"
@@ -226,32 +229,37 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     // MARK: - Table View Datasource
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return PathFinder.shared.destinationCollection.count
+        return optimalRouteArray?.count ?? 0
+//        return PathFinder.shared.destinationCollection.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let optimalRouteArray = optimalRouteArray else {
+            fatalError("should not be loading cells when no route defined")
+        }
         if let cell = tableView.dequeueReusableCell(withIdentifier: CELL_ID) as? RouteCell {
-            let xyz = PathFinder.shared.destinationCollection[indexPath.row].name ?? ""
+            let name = PathFinder.shared.destinationCollection[optimalRouteArray[indexPath.row]].name ?? ""
             var dist: Double? = nil
             
             // first-cell exclusive behavior
             if indexPath.row != 0 {
-                dist = PathFinder.shared.destinationCollection.getDistance(between: indexPath.row - 1, and: indexPath.row)
+                dist = PathFinder.shared.destinationCollection.getDistance(between: optimalRouteArray[indexPath.row - 1],
+                                     and: optimalRouteArray[indexPath.row])
             }
             cell.isUserInteractionEnabled = indexPath.row != 0
             
             if indexPath.row == 0 {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: nil, sequenceType: .Start)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: nil, sequenceType: .Start)
             } else if indexPath.row == PathFinder.shared.destinationCollection.count - 1 && selectedStopIndex != indexPath.row {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: dist!, sequenceType: .End)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: dist!, sequenceType: .End)
             } else if indexPath.row == PathFinder.shared.destinationCollection.count - 1 && selectedStopIndex == indexPath.row {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: dist!, sequenceType: .NextIsEndTarget)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: dist!, sequenceType: .NextIsEndTarget)
             } else if indexPath.row == selectedStopIndex {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: dist!, sequenceType: .NextNonEndTarget)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: dist!, sequenceType: .NextNonEndTarget)
             } else if indexPath.row > selectedStopIndex {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: dist!, sequenceType: .Incomplete)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: dist!, sequenceType: .Incomplete)
             } else if indexPath.row < selectedStopIndex {
-                cell.setDistance(index: indexPath.row, title: xyz, distanceInMeters: dist!, sequenceType: .Complete)
+                cell.setDistance(index: indexPath.row, title: name, distanceInMeters: dist!, sequenceType: .Complete)
             }
 
             return cell

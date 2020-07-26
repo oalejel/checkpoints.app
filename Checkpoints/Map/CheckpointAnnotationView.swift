@@ -34,9 +34,9 @@ class NumberedPinView: UIView {
         addSubview(label)
     }
     
-    func setTitleNumber(_ i: Int) {
+    func setTitleNumber(_ i: String) {
         label.text = "\(i)"
-//        label.setNeedsDisplay()
+        label.setNeedsDisplay()
     }
     
     required init?(coder: NSCoder) {
@@ -121,7 +121,7 @@ final class NumberedAnnotationView: MKAnnotationView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func setTitleNumber(_ i: Int) {
+    func setTitleNumber(_ i: String) {
         pinView.setTitleNumber(i)
     }
 

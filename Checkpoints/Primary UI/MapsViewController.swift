@@ -11,7 +11,7 @@ import UIKit
 import CoreLocation
 
 protocol LocationsDelegate {
-    func allowEditingPins() -> Bool 
+    func attemptAllowEditingPins() -> Bool 
     func updatedSearchResults(mapItems: [MKMapItem])
     func shouldPreviewCheckpoint(mapItem: MKMapItem, showActions: Bool)
     func shouldEndCheckpointPreview()
@@ -51,7 +51,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
     }
     
     @objc func longPress(gc: UILongPressGestureRecognizer) {
-        if !(delegate?.allowEditingPins() ?? false) { return } // ignore if not allowed to add pins
+        if !(delegate?.attemptAllowEditingPins() ?? false) { return } // ignore if not allowed to add pins
         if gc.state == .began {
             let coordinate = mapView.convert(gc.location(ofTouch: 0, in: mapView), toCoordinateFrom: mapView)
             PathFinder.shared.computeMapItem(for: coordinate) { (mapItem) in
@@ -272,11 +272,13 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                 annotationView = pinView
             }
         case .Numbered(let num):
+            print("pin num: \(num), place: \(annotation.title)")
             if annotationView == nil {
                 let numberedView = NumberedAnnotationView(annotation: annotation, reuseIdentifier: reuseID)
                 annotationView = numberedView
             }
-            (annotationView as! NumberedAnnotationView).setTitleNumber(num)
+            //String(annotation.title!.split(separator: " ")[1]))
+            (annotationView as! NumberedAnnotationView).setTitleNumber(String(num))
         }
         
         annotationView!.canShowCallout = true
@@ -302,7 +304,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                     delegate?.shouldEndCheckpointPreview() // removes preview vc and pending pin (redundantly)
                 } else {
                     if let selectedMapItem = (selectedAnnotation as? CheckpointAnnotation)?.mapItem {
-                        let showActions = delegate?.allowEditingPins() ?? false 
+                        let showActions = delegate?.attemptAllowEditingPins() ?? false 
                         delegate?.shouldPreviewCheckpoint(mapItem: selectedMapItem, showActions: showActions)
                     } else {
                         fatalError("no map item for selected annotation!")
