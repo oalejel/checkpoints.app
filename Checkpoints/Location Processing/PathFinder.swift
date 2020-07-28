@@ -230,63 +230,83 @@ class PathFinder {
             let childEdgeCount = self.destinationCollection.count
             self.taskProgressDenominator += childEdgeCount
             
+            #warning("though appended, we are not guaranteed that distances will be ready at this point")
+            self.destinationCollection.append(mapItem)
+            
             print("waiting from adddest")
             self.destinationRequestSemaphore.wait() // block a remove operation
-            
-            self.destinationCollection.append(mapItem)
-//            self.destinations.append(mapItem) // may want to compute edge weights to this destination
-//            self.destIntermediateIndices.append(self.destIntermediateIndices.count) // first item -> gets index 0
-            
-//            self.distanceMatrix.append([])
+            var asTheCrowFlies = false
             let rowIndex = self.destinationCollection.count - 1 // hold on to this in case we get another concurrent call?
-//            self.distanceMatrix[rowIndex].reserveCapacity(rowIndex)
             print("about to loop on rows")
-            for colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
+            for var colIndex in (0..<rowIndex) { // only store connections to row many nodes to save space
                 assert(mapItem != self.destinationCollection[colIndex]) // catch an old bug where same location was added
-                let request = MKDirections.Request()
-                request.source = mapItem
-                request.destination = self.destinationCollection[colIndex]
-                request.requestsAlternateRoutes = false
-                request.transportType = .automobile
-                let directions = MKDirections(request: request)
                 
-                let etaSemaphore = DispatchSemaphore(value: 0)
-                print("gonna calc eta")
-                directions.calculateETA { (etaResponse, error) in
-                    print("got eta calculation")
-                    guard let etaResponse = etaResponse else {
-                        print(error ?? "Unknown error trying to compute ETA")
-                        // TODO: tell someone that this failed and rollback changes....
-                        
-                        // case 1: too many requests made at one time, start a timer to repeat the request
-                        if let mapError = error as? MKError,
-                            let geoErrorDict = mapError.errorUserInfo["MKErrorGEOErrorUserInfo"] as? [String : Any],
-                            let underError = geoErrorDict["NSUnderlyingError"] as? NSError,
-                            let resetTime = underError.userInfo["timeUntilReset"] as? NSNumber {
-                                print(resetTime)
-                        } else { // case 2? catch issue where destination is impossible to find directions to (like middle of ocean)
-                            fatalError("FATAL: find way to handle case where eta cant be computed")
-                        }
-                            
-                        
-                        return
-                    }
-                    
+                let coord1 = mapItem.placemark.coordinate
+                let clloc1 = CLLocation(latitude: coord1.latitude, longitude: coord1.longitude)
+                let coord2 = self.destinationCollection[colIndex].placemark.coordinate
+                let clloc2 = CLLocation(latitude: coord2.latitude, longitude: coord2.longitude)
+                let straightDistance = clloc1.distance(from: clloc2)
+                
+                func _increment_progress() {
                     self.taskProgressNumerator += 1
                     let lastPercent = self.currentTaskProgress
                     let newPercent = Float(self.taskProgressNumerator) / Float(self.taskProgressDenominator)
                     if self.currentTaskProgress - lastPercent > 0.01 { // if delta is > 1%, update progress
                         self.currentTaskProgress = newPercent // calls setter to update UI
                     }
-//                    assert(self.destinationCollection[rowIndex].count == colIndex)
-                    self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: etaResponse.distance)
-                    etaSemaphore.signal() // indicate that we can move on to next iteration
                 }
-                etaSemaphore.wait() // wait on eta to finish adding distance to matrix
-//                while directions.isCalculating {
-//                    // do nothing
-//                }
+                
+                // if we are in atcf mode OR the distance is very small, dont waste a request
+                if asTheCrowFlies || straightDistance < 200 {
+                    print(">>>> USING ESTIMATED DIST")
+                    _increment_progress()
+                    self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: straightDistance)
+                } else {
+                    let request = MKDirections.Request()
+                    request.source = mapItem
+                    request.destination = self.destinationCollection[colIndex]
+                    request.requestsAlternateRoutes = false
+                    request.transportType = .automobile
+                    let directions = MKDirections(request: request)
+                    
+                    let etaSemaphore = DispatchSemaphore(value: 0)
+                    print("gonna calc eta")
+                    
+                    directions.calculateETA { (etaResponse, error) in
+                        print("got eta calculation")
+                        guard let etaResponse = etaResponse else {
+                            print(error ?? "Unknown error trying to compute ETA")
+                            // TODO: tell someone that this failed and rollback changes....
+                            
+                            // case 1: too many requests made at one time, start a timer to repeat the request
+                            if let mapError = error as? MKError,
+                                let geoErrorDict = mapError.errorUserInfo["MKErrorGEOErrorUserInfo"] as? [String : Any],
+                                let underError = geoErrorDict["NSUnderlyingError"] as? NSError,
+                                let resetTime = underError.userInfo["timeUntilReset"] as? NSNumber {
+                                    print(resetTime)
+                                
+                                print("SWITCHING TO STRAIGHT DISTANCE ESTIMATES")
+//                                print("SLEEPING TO WAIT FOR RESET TIME!")
+//                                sleep(UInt32(truncating: resetTime))
+                                asTheCrowFlies = true
+                                colIndex -= 1
+                            } else { // case 2? catch issue where destination is impossible to find directions to (like middle of ocean)
+                                fatalError("FATAL: find way to handle case where eta cant be computed")
+                            }
+                                
+                            return
+                        }
+                        
+                        _increment_progress()
+                        self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: etaResponse.distance)
+                        etaSemaphore.signal() // indicate that we can move on to next iteration
+                    }
+                    
+                    etaSemaphore.wait() // wait on eta to finish adding distance to matrix
+                }
+                
             }
+            
             self.incompleteJobCount -= 1
 //            self.taskProgressDenominator -= childEdgeCount
             if self.incompleteJobCount == 0 {
@@ -339,10 +359,18 @@ class PathFinder {
             self.taskProgressNumerator = 0
             (self.taskProgressDenominator, self.permCheckDepth) = self.cutoffFactorial(n: self.destinationCollection.count)
             
+//            self.bestPath.append(self.bestPath.first!)
+//            self.bestPath.reverse()
+//            self.bestPath.removeLast()
+            
             print("starting with path upper bound of weight: ", self.bestPathDistance)
             // WARNING: rotate bestPath so that index 0 has node 0 (start node)
             self.permutation = self.bestPath // start with best one so far to help search time
             self.generatePermutations(permLength: 1, growingDistance: 0.0)
+            
+            self.bestPath.append(self.bestPath.first!)
+            self.bestPath.reverse()
+            self.bestPath.removeLast()
             
             print("best permutation (user indices): ", self.bestPath)
 //            completion(self.self.bestPath.map { self.destinationCollection[$0] })

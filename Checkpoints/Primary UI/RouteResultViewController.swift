@@ -125,8 +125,6 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         viewDidAppearCalled = true
     }
     
-    
-    
     // MARK: - UI Helpers
     
     // call to remove progress bar
@@ -179,7 +177,9 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     // MARK: - IBActions
     
     @IBAction func startDirectionsPressed(_ sender: UIButton) {
-        PathFinder.shared.destinationCollection[selectedStopIndex].openInMaps(launchOptions: nil)
+        if let optimalRouteArray = optimalRouteArray {
+            PathFinder.shared.destinationCollection[optimalRouteArray[selectedStopIndex]].openInMaps(launchOptions: nil)
+        }
     }
     
     @IBAction func closePressed(_ sender: Any) {
@@ -273,12 +273,12 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
     @objc func willEnterForeground() {
         // check that we are closer to the current destination than the previous checkpoint. if so, move on to the next index
         // only if we have more destinations to reach
-        if selectedStopIndex < PathFinder.shared.destinationCollection.count - 1 {
+        if let optimalRouteArray = optimalRouteArray, selectedStopIndex < PathFinder.shared.destinationCollection.count - 1 {
             print("awaiting loc update to check if we arrived")
             PathFinder.shared.awaitLocationUpdate { currentCoord in
                 print("comparing cur to next destination!!!")
-                let lastCoord = PathFinder.shared.destinationCollection[self.selectedStopIndex - 1].placemark.coordinate
-                let nextCoord = PathFinder.shared.destinationCollection[self.selectedStopIndex].placemark.coordinate
+                let lastCoord = PathFinder.shared.destinationCollection[optimalRouteArray[self.selectedStopIndex - 1]].placemark.coordinate
+                let nextCoord = PathFinder.shared.destinationCollection[optimalRouteArray[self.selectedStopIndex]].placemark.coordinate
                 
                 var distToLast = pow(lastCoord.latitude - currentCoord.latitude, 2)
                 distToLast += pow(lastCoord.longitude - currentCoord.longitude, 2)

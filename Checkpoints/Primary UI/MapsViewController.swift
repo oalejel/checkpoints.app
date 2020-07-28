@@ -40,6 +40,11 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         mapView.showsUserLocation = true
         mapView.userTrackingMode = .follow
         mapView.delegate = self
+        mapView.showsCompass = false
+        mapView.showsPointsOfInterest = true
+//        if let compassView = mapView.subviews.filter({ $0.isKindOfClass(NSClassFromString("MKCompassView")!) }).first {
+//            compassView.frame = CGRectMake(15, 30, 36, 36)
+//        }
         
         let longPress = UILongPressGestureRecognizer(target: self, action: #selector(longPress(gc:)))
         longPress.minimumPressDuration = 0.6

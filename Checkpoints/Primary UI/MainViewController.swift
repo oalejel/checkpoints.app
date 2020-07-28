@@ -108,13 +108,16 @@ class MainViewController: UINavigationController, OverlayContainerDelegate, UIVi
 
 extension MainViewController: OverlayNavigationViewControllerDelegate {
     func overlayNavigationViewControllerWillShowViewController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
-        if let vc = viewController as? StatefulViewController {
-            state = vc.getUserState()
-        }
+//        if let vc = viewController as? StatefulViewController {
+//            state = vc.getUserState()
+//        }
     }
     
     
     func overlayNavigationViewController(_ navigationController: OverlayNavigationViewController, didShow viewController: UIViewController, animated: Bool) {
+        if let vc = viewController as? StatefulViewController {
+            self.state = vc.getUserState()
+        }
     }
 //    func overlayNavigationViewControllerDidPopViewController(_ navigationController: OverlayNavigationViewController, animated: Bool) {
 //        // adjust state depending on type of view controller
@@ -174,22 +177,16 @@ extension MainViewController: SearchViewControllerDelegate {
             }
         } else { // temporarily show the pin on the map
             let cvc = CheckpointViewController(mapItem: searchViewController.selectedMapItem!, alreadyAdded: alreadyAdded, showActions: true)
-            // force the view to generate its layout constraints
-            cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: searchViewController.view.frame.size.width))
-            cvc.view.setNeedsLayout()
-            cvc.view.layoutIfNeeded()
-            
-            print(cvc.view.frame)
             
             cvc.delegate = self
             overlayNavigationController.push(cvc, animated: true)
             mapsViewController.showPendingPin(mapItem: searchViewController.selectedMapItem!)
         }
-        state = .PreviewCheckpoint
+//        state = .PreviewCheckpoint
     }
     
     func searchViewControllerDidSelectCloseAction(_ searchViewController: SearchViewController) {
-        state = .Searching
+//        state = .Searching
     }
 
     func searchViewControllerDidSearchString(_ string: String) {
@@ -228,10 +225,9 @@ extension MainViewController: LocationsDelegate {
             PathFinder.shared.startLocationItem = mapItem // set to first location as default
         }
         
-        searchViewController.clearEditing(refreshAddedCheckpoints: true)
-        
         mapsViewController.savePin(for: mapItem, focus: focus)
         overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+        searchViewController.clearEditing(refreshAddedCheckpoints: true)
         
         refreshCheckpointsButton()
     }
@@ -308,16 +304,6 @@ extension MainViewController: LocationsDelegate {
         cvc.delegate = self
         
         
-        // force the view to generate its layout constraints
-//        cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: searchViewController.view.frame.size.width))
-        cvc.view.setNeedsLayout()
-        cvc.view.layoutIfNeeded()
-        cvc.view.sizeToFit()
-        print(cvc.view.frame)
-        
-        
-        
-        
 //        state = .PreviewCheckpoint
         searchViewController.selectedMapItem = mapItem
         overlayNavigationController.push(cvc, animated: true)
@@ -330,17 +316,6 @@ extension MainViewController: LocationsDelegate {
     func manualPinPlaced(for mapItem: MKMapItem) {
         let cvc = CheckpointViewController(mapItem: mapItem, alreadyAdded: false, showActions: true)
         cvc.delegate = self
-        
-        
-        // force the view to generate its layout constraints
-//        cvc.view.addConstraint(cvc.view.widthAnchor.constraint(equalToConstant: UIScreen.main.bounds.width))
-//        cvc.view.setNeedsLayout()
-//        cvc.view.layoutIfNeeded()
-//        let instrinsic = cvc.view.intrinsicContentSize
-//        print(instrinsic)
-//        cvc.view.sizeToFit()
-        print(cvc.view.frame)
-        
         
 //        state = .PreviewCheckpoint
         overlayNavigationController.push(cvc, animated: true)
@@ -406,8 +381,6 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
                 return OverlayNotch.allCases.count
             case .PreviewCheckpoint:
                 return 1
-//            case .CustomHeight:
-//                return 1
             case .Routing(let heights):
                 return max(heights.count, 1) // lets return the fitting height and a max height as possible heights
         }
@@ -423,9 +396,10 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
         case .PreviewCheckpoint:
             guard let overlay = containerViewController.topViewController else { return 0 }
             if let topOfOverlay = overlay.children.first?.children.last {
+                print("IN PREVIEW SIZING: ", topOfOverlay)
                 
-                topOfOverlay.view.setNeedsLayout()
-                topOfOverlay.view.layoutIfNeeded()
+//                topOfOverlay.view.setNeedsLayout()
+//                topOfOverlay.view.layoutIfNeeded()
 
                 let targetWidth = topOfOverlay.view.bounds.width
                 let targetSize = CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height)

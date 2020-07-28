@@ -57,9 +57,9 @@ class RouteConfigController: UIViewController, StatefulViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.preferredContentSize = self.view.systemLayoutSizeFitting(
-            UIView.layoutFittingCompressedSize
-        )
+//        self.preferredContentSize = self.view.systemLayoutSizeFitting(
+//            UIView.layoutFittingCompressedSize
+//        )
 
         // Do any additional setup after loading the view.
         view.layer.cornerRadius = 26
@@ -115,8 +115,8 @@ class RouteConfigController: UIViewController, StatefulViewController {
         super.viewDidLayoutSubviews()
         
         if !didLayout {
-            didLayout = true
             setSingleTravelerMode(isSingle: true)
+            didLayout = true
         }
     }
     
@@ -142,14 +142,14 @@ class RouteConfigController: UIViewController, StatefulViewController {
     }
     
     func setSingleTravelerMode(isSingle: Bool) {
-        let start = mainStackview.frame.size.height
-
         if isSingle {
             // leave stepper with stale value, but update numTravelers
             numTravelers = 1
             updateTravelersDistanceText()
             UIView.animate(withDuration: 0.2) { // hide quickly
                 self.stepper.alpha = 0
+//                self.stepperStackview.alpha = 0
+//                self.stepperSeparator.alpha = 0
             }
         } else {
             // reset stepper
@@ -162,32 +162,36 @@ class RouteConfigController: UIViewController, StatefulViewController {
             // animate in
             UIView.animate(withDuration: 0.5, delay: 0.3, options: .curveEaseIn, animations: {
                 self.stepper.alpha = 1
+//                self.stepperStackview.alpha = 1
+//                self.stepperSeparator.alpha = 1
+//                self.stepperStackview.isHidden = false
+//                self.stepperSeparator.isHidden = false
             }, completion: nil)
         }
 
         // always a half second animation for other components
-        UIView.animate(withDuration: 0.5) {
-            if isSingle {
-                self.stepperStackview.isHidden = true
-                self.stepperSeparator.isHidden = true
-            } else {
-                self.stepperStackview.isHidden = false
-                self.stepperSeparator.isHidden = false
-            }
+//        UIView.animate(withDuration: 0.5) {
+        if isSingle {
+            print("ABC")
+            self.stepperStackview.isHidden = true
+            self.stepperSeparator.isHidden = true
+        } else {
+            print("DEF")
+            self.stepperStackview.isHidden = false
+            self.stepperSeparator.isHidden = false
         }
+//        }
         
-        let end = mainStackview.frame.size.height
-        if start > end { // shrinking
-            heightDelegate?.didChangeHeightState(state: .Routing([smallHeight])) //view.bounds.height - (start - end))
-        } else if start == end { // small hack for first time this happens, where we need to adjust for the height
+        if !didLayout {
             print(view.frame.size.height)
             smallHeight = view.bounds.height - (startStackHeight - mainStackview.frame.size.height)
             largeHeight = view.bounds.height
             heightDelegate?.didChangeHeightState(state: .Routing([smallHeight]))
+        } else if isSingle {
+            heightDelegate?.didChangeHeightState(state: .Routing([smallHeight])) //view.bounds.height - (start - end))
         } else {
-            heightDelegate?.didChangeHeightState(state: .Routing([largeHeight])) //view.bounds.height - (start - end) - permanentViewOffset)
+            heightDelegate?.didChangeHeightState(state: .Routing([largeHeight]))
         }
-
     }
     
     // MARK: - IBActions and Callbacks

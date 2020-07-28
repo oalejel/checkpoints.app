@@ -31,7 +31,6 @@ class NumberedPinView: UIView {
         label.textAlignment = .center
         label.font = UIFont.systemFont(ofSize: 20, weight: .medium)
         label.adjustsFontSizeToFitWidth = true
-        addSubview(label)
     }
     
     func setTitleNumber(_ i: String) {
@@ -44,7 +43,7 @@ class NumberedPinView: UIView {
     }
     
     override func draw(_ rect: CGRect) {
-        print("draw rect")
+//        print("draw rect")
         super.draw(rect)
         let path = UIBezierPath()
         let w = rect.size.width
@@ -90,13 +89,18 @@ class NumberedPinView: UIView {
         circle.close()
         circle.fill()
         
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.removeConstraints(label.constraints)
-        addConstraints([
-            label.centerYAnchor.constraint(equalTo: topAnchor, constant: w / 2),
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: border + pad + (0.1 * w)),
-            trailingAnchor.constraint(equalTo: label.trailingAnchor, constant: border + pad + (0.1 * w))
-        ])
+        if label.superview == nil {
+            addSubview(label)
+            label.translatesAutoresizingMaskIntoConstraints = false
+            label.removeConstraints(label.constraints)
+            addConstraints([
+                label.centerYAnchor.constraint(equalTo: topAnchor, constant: w / 2),
+                label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: border + pad + (0.1 * w)),
+                trailingAnchor.constraint(equalTo: label.trailingAnchor, constant: border + pad + (0.1 * w))
+            ])
+        }
+        
+        label.setNeedsDisplay()
     }
 }
 
