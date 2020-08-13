@@ -60,6 +60,7 @@ class CheckpointViewController: UIViewController, StatefulViewController {
 
         // Do any additional setup after loading the view.
         view.layer.cornerRadius = 26
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         view.layer.masksToBounds = true
 
 //        closeButton.backgroundColor = .lightGray

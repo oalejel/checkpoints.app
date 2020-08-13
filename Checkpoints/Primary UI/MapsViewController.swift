@@ -260,6 +260,87 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
         
     }
     
+    // MARK: - Overlays
+    
+//    func mapView(_ mapView: MKMapView, didAdd renderers: [MKOverlayRenderer]) {
+//
+//    }
+//
+//    func mapView(_ mapView: MKMapView, didAddOverlayViews overlayViews: [Any]) {
+//
+//    }
+    
+//    func mapView(_ mapView: MKMapView, viewFor overlay: MKOverlay) -> MKOverlayView {
+//
+//    }
+    
+//    var animatedRenderer: AnimatedLineRenderer?
+//    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+//        guard let animatedLine = overlay as? AnimatedPolyline else {
+//            return MKOverlayRenderer()
+//        }
+//
+//        let renderer = AnimatedLineRenderer(overlay: overlay)
+//        renderer.animatedPolyline = animatedLine
+//        animatedRenderer = renderer
+//        return renderer
+//
+////        let polylineRenderer = MKPolylineRenderer(overlay: polyline)
+////        polylineRenderer.strokeColor = .systemBlue
+////        polylineRenderer.lineWidth = 6
+////        polylineRenderer.lineDashPattern = [0.7, 0.3]
+////        polylineRenderer.lineCap = .round
+////        return polylineRenderer
+//    }
+    
+//    var drawingTimer: Timer?
+//    var currentPolyLine: MKPolyline?
+//    func animate(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)?) {
+//            guard route.count > 0 else { return }
+//            var currentStep = 1
+//            let totalSteps = route.count
+//            let stepDrawDuration = duration/TimeInterval(totalSteps)
+//            var previousSegment: MKPolyline?
+//
+//            drawingTimer = Timer.scheduledTimer(withTimeInterval: stepDrawDuration, repeats: true) { [weak self] timer in
+//                guard let self = self else {
+//                    // Invalidate animation if we can't retain self
+//                    timer.invalidate()
+//                    completion?()
+//                    return
+//                }
+//
+//                if let previous = previousSegment {
+//                    // Remove last drawn segment if needed.
+//                    self.mapView.removeOverlay(previous)
+//                    previousSegment = nil
+//                }
+//
+//                guard currentStep < totalSteps else {
+//                    // If this is the last animation step...
+//                    let finalPolyline = MKPolyline(coordinates: route, count: route.count)
+//                    self.mapView.addOverlay(finalPolyline)
+//                    // Assign the final polyline instance to the class property.
+//                    self.currentPolyLine = finalPolyline
+//                    timer.invalidate()
+//                    completion?()
+//                    return
+//                }
+//
+//                // Animation step.
+//                // The current segment to draw consists of a coordinate array from 0 to the 'currentStep' taken from the route.
+//                let subCoordinates = Array(route.prefix(upTo: currentStep))
+//                let currentSegment = MKPolyline(coordinates: subCoordinates, count: subCoordinates.count)
+//                self.mapView.addOverlay(currentSegment)
+//
+//                previousSegment = currentSegment
+//                currentStep += 1
+//            }
+//        }
+
+    
+    // MARK: - Annotations
+    
     func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
         guard let annotation = annotation as? CheckpointAnnotation else {
             return nil

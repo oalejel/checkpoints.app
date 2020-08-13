@@ -28,7 +28,7 @@ protocol HeightAdjustmentDelegate {
 }
 
 enum UserState: Equatable {
-    case Searching, PreviewCheckpoint, Routing([CGFloat])//, CustomHeight(CGFloat)
+    case Searching, PreviewCheckpoint, Routing([CGFloat]), GroupRoutingPreview//, CustomHeight(CGFloat)
 }
 
 protocol StatefulViewController {
@@ -263,7 +263,7 @@ extension MainViewController: LocationsDelegate {
     }
     
     func refreshCheckpointsButton() {
-        if PathFinder.shared.destinationCollection.count > 1 {
+        if PathFinder.shared.destinationCollection.count > 2 {
             searchViewController.header.routeButton.isHidden = false
         } else {
             searchViewController.header.routeButton.isHidden = true
@@ -337,8 +337,10 @@ extension MainViewController: RouteConfigDelegate {
         mapsViewController.mapView.removeAnnotations(mapsViewController.mapView.annotations)
         
         var generatedAnnotations: [CheckpointAnnotation] = []
+        var coords: [CLLocationCoordinate2D] = []
         for stepIndex in 0..<pathIndices.count {
             let item = PathFinder.shared.destinationCollection[pathIndices[stepIndex]]
+            coords.append(item.placemark.coordinate)
             let ann = CheckpointAnnotation(mapItem: item)
             ann.viewType = .Numbered(stepIndex + 1)
             ann.title = item.placemark.name ?? item.placemark.title ?? "\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude)"
@@ -346,6 +348,12 @@ extension MainViewController: RouteConfigDelegate {
             generatedAnnotations.append(ann)
         }
         
+//        let polyline = MKPolyline(coordinates: coords, count: coords.count)
+//        let line = AnimatedPolyline(coordinates: coords, count: coords.count)
+//        line.animatedCoords = coords
+//        mapsViewController.mapView.addOverlay(line)
+//
+//        self.mapsViewController.animate(route: coords, duration: 1, completion: nil)
         mapsViewController.mapView.addAnnotations(generatedAnnotations)
     }
     
@@ -379,7 +387,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
         switch state {
             case .Searching:
                 return OverlayNotch.allCases.count
-            case .PreviewCheckpoint:
+            case .PreviewCheckpoint, .GroupRoutingPreview:
                 return 1
             case .Routing(let heights):
                 return max(heights.count, 1) // lets return the fitting height and a max height as possible heights
@@ -393,7 +401,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
         case .Searching:
             let notch = OverlayNotch.allCases[index]
             return fractionalNotchHeights(for: notch, availableSpace: availableSpace)
-        case .PreviewCheckpoint:
+        case .PreviewCheckpoint, .GroupRoutingPreview:
             guard let overlay = containerViewController.topViewController else { return 0 }
             if let topOfOverlay = overlay.children.first?.children.last {
                 print("IN PREVIEW SIZING: ", topOfOverlay)
@@ -428,7 +436,7 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
         switch state {
         case .Searching:
             return searchViewController.tableView
-        case .PreviewCheckpoint:
+        case .PreviewCheckpoint, .GroupRoutingPreview:
             return nil
         case .Routing:
             if let topVC = overlayNavigationController.topViewController as? RouteResultViewController {
@@ -452,13 +460,11 @@ extension MainViewController: OverlayContainerViewControllerDelegate {
             let hitHeader = header.bounds.contains(coordinateSpace.convert(point, to: header))
             searchViewController.header.searchBar.resignFirstResponder()
             return hitHeader
-        case .PreviewCheckpoint:
+        case .PreviewCheckpoint, .Routing, .GroupRoutingPreview:
 //            let vc = overlayNavigationController.topViewController!
 //            let convertedPoint = coordinateSpace.convert(point, to: vc.view)
 //            let yes = vc.view.bounds.contains(convertedPoint)
 //            return yes
-            return true
-        case .Routing:
             return true
         }
     }

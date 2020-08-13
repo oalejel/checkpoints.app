@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="16097.2" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina6_1" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16087"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <collectionViewCell opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" id="gTV-IL-0wX" customClass="DriverRouteCollectionCell" customModule="Checkpoints" customModuleProvider="target">
+            <rect key="frame" x="0.0" y="0.0" width="464" height="283"/>
+            <autoresizingMask key="autoresizingMask"/>
+            <view key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center">
+                <rect key="frame" x="0.0" y="0.0" width="464" height="283"/>
+                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                <subviews>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" verticalCompressionResistancePriority="752" text="Driver 1" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="W1a-Ka-o9h">
+                        <rect key="frame" x="12" y="12" width="81.5" height="27.5"/>
+                        <fontDescription key="fontDescription" type="boldSystem" pointSize="23"/>
+                        <color key="textColor" systemColor="secondaryLabelColor" red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" verticalCompressionResistancePriority="752" text="7.5 stops, 15.1 mi" textAlignment="right" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="JT9-pA-LW8">
+                        <rect key="frame" x="324" y="19" width="128" height="19.5"/>
+                        <fontDescription key="fontDescription" type="system" weight="semibold" pointSize="16"/>
+                        <color key="textColor" systemColor="secondaryLabelColor" red="0.23529411759999999" green="0.23529411759999999" blue="0.26274509800000001" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
+                        <nil key="highlightedColor"/>
+                    </label>
+                    <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="GpN-aW-tKg">
+                        <rect key="frame" x="0.0" y="47.5" width="464" height="223.5"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                    </tableView>
+                </subviews>
+            </view>
+            <constraints>
+                <constraint firstItem="W1a-Ka-o9h" firstAttribute="top" secondItem="gTV-IL-0wX" secondAttribute="top" constant="12" id="895-cj-KBV"/>
+                <constraint firstItem="GpN-aW-tKg" firstAttribute="top" secondItem="W1a-Ka-o9h" secondAttribute="bottom" constant="8" id="9D0-bo-tfE"/>
+                <constraint firstItem="W1a-Ka-o9h" firstAttribute="leading" secondItem="gTV-IL-0wX" secondAttribute="leading" constant="12" id="H5N-4W-eRA"/>
+                <constraint firstItem="GpN-aW-tKg" firstAttribute="leading" secondItem="gTV-IL-0wX" secondAttribute="leading" id="dxZ-jd-ol4"/>
+                <constraint firstAttribute="trailing" secondItem="JT9-pA-LW8" secondAttribute="trailing" constant="12" id="dyG-a3-BbB"/>
+                <constraint firstAttribute="bottom" secondItem="GpN-aW-tKg" secondAttribute="bottom" constant="12" id="fOF-y4-lhg"/>
+                <constraint firstAttribute="trailing" secondItem="GpN-aW-tKg" secondAttribute="trailing" id="stt-Kn-Bai"/>
+                <constraint firstItem="JT9-pA-LW8" firstAttribute="firstBaseline" secondItem="W1a-Ka-o9h" secondAttribute="firstBaseline" id="y0B-BS-kZs"/>
+            </constraints>
+            <size key="customSize" width="464" height="283"/>
+            <connections>
+                <outlet property="detailLabel" destination="JT9-pA-LW8" id="Sgd-PH-ffG"/>
+                <outlet property="tableView" destination="GpN-aW-tKg" id="ldl-do-f8c"/>
+                <outlet property="titleLabel" destination="W1a-Ka-o9h" id="Xy5-Yn-OJV"/>
+            </connections>
+            <point key="canvasLocation" x="437.68115942028987" y="226.67410714285714"/>
+        </collectionViewCell>
+    </objects>
+</document>

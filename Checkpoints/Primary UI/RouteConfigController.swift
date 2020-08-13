@@ -63,6 +63,7 @@ class RouteConfigController: UIViewController, StatefulViewController {
 
         // Do any additional setup after loading the view.
         view.layer.cornerRadius = 26
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         view.layer.masksToBounds = true
         view.backgroundColor = .white
         
@@ -92,7 +93,6 @@ class RouteConfigController: UIViewController, StatefulViewController {
         self.stepperSeparator.isHidden = true
         
         checkpointCountLabel.text = "\(PathFinder.shared.destinationCollection.count) checkpoints"
-        
         self.startStackHeight = self.mainStackview.frame.size.height
         
         PathFinder.shared.notifyOnRequestCompletion {
@@ -146,11 +146,11 @@ class RouteConfigController: UIViewController, StatefulViewController {
             // leave stepper with stale value, but update numTravelers
             numTravelers = 1
             updateTravelersDistanceText()
-            UIView.animate(withDuration: 0.2) { // hide quickly
+//            UIView.animate(withDuration: 0.2) { // hide quickly
                 self.stepper.alpha = 0
 //                self.stepperStackview.alpha = 0
 //                self.stepperSeparator.alpha = 0
-            }
+//            }
         } else {
             // reset stepper
             numTravelers = 2
@@ -160,13 +160,13 @@ class RouteConfigController: UIViewController, StatefulViewController {
             updateTravelersDistanceText()
             
             // animate in
-            UIView.animate(withDuration: 0.5, delay: 0.3, options: .curveEaseIn, animations: {
+//            UIView.animate(withDuration: 0.5, delay: 0.3, options: .curveEaseIn, animations: {
                 self.stepper.alpha = 1
 //                self.stepperStackview.alpha = 1
 //                self.stepperSeparator.alpha = 1
 //                self.stepperStackview.isHidden = false
 //                self.stepperSeparator.isHidden = false
-            }, completion: nil)
+//            }, completion: nil)
         }
 
         // always a half second animation for other components
@@ -206,10 +206,19 @@ class RouteConfigController: UIViewController, StatefulViewController {
     }
     
     @IBAction func computePressed(_ sender: Any) {
-        let passedOnState = UserState.Routing([smallHeight, UIScreen.main.bounds.height * 0.75])
-        let rrvc = RouteResultViewController(state: passedOnState, delegate: delegate)
-        navigationController?.pushViewController(rrvc, animated: true)
-        heightDelegate?.didChangeHeightState(state: passedOnState)
+        if numTravelers == 1 {
+            let passedOnState = UserState.Routing([smallHeight, UIScreen.main.bounds.height * 0.75])
+            let rrvc = RouteResultViewController(state: passedOnState, delegate: delegate)
+            navigationController?.pushViewController(rrvc, animated: true)
+            heightDelegate?.didChangeHeightState(state: passedOnState)
+        } else {
+            let grvc = GroupResultsController(numDrivers: numTravelers, delegate: delegate)
+            navigationController?.pushViewController(grvc, animated: true)
+//            let passedOnState = UserState.Routing([smallHeight, UIScreen.main.bounds.height * 0.75])
+//            let rrvc = RouteResultViewController(state: passedOnState, delegate: delegate)
+//            navigationController?.pushViewController(rrvc, animated: true)
+//            heightDelegate?.didChangeHeightState(state: passedOnState)
+        }
     }
         
     @IBAction func stepperValueChanged(_ sender: UIStepper) {

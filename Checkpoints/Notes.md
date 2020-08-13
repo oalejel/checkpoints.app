@@ -3,6 +3,9 @@
 to consider
 - may want to update "current location" default checkpoint to show that its no longer correct if the user moves. this requires repeatedly geouncoding a location as long as the coordinate is at least some threshold number of meters away from the last current location, in order to either update teh cell's address, or mark the originally added one as unfresh 
 - consider making accent on left of checkpoint cell be based on a temperature color corresponding to distance from current location
+- allowing group members to start and end at unique locations. for now, lets have them all start in the same location 
+- might also want to consider case where we dont care where they end up??? not sure...
+- common use case for volunteering: group members come pick up goods from a checkup area, and drop off items then go back to their homes OR back to the start location
 
 must add features for convenience 
 - should allow a location in maps to export to this app to add a checkpoint 

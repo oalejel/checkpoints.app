@@ -67,6 +67,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         // ---- essential ui setup
         view.layer.cornerRadius = 26
         view.layer.masksToBounds = true
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
 
         // prepare initial contents
         refreshDriverIndexUI()
@@ -92,7 +93,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
                 
                 // if view already appeared, we must show primary UI here
                 if self.viewWillAppearedCalled {
-                    self.togglePrimaryUIVisibility(hidden: false, animated: true)
+                    self.togglePrimaryUIVisibility(hidden: false, animated: self.viewDidAppearCalled)
                 }
                 
                 self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?

@@ -62,6 +62,7 @@ DetailHeaderViewDelegate, StatefulViewController {
 //        header.checkpointCountButton.isHidden = true // hide count when we havent added anything
         
         view.layer.cornerRadius = 26
+        view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         view.layer.masksToBounds = true
         
         view.backgroundColor = .white//UIColor(white: 0.95, alpha: 1)

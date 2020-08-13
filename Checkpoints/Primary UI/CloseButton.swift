@@ -13,9 +13,9 @@ class CloseButton: UIButton {
     override var isHighlighted: Bool {
         didSet {
             if isHighlighted {
-                backgroundColor = UIColor(white: 0.8, alpha: 1)
-            } else {
                 backgroundColor = UIColor(white: 0.85, alpha: 1)
+            } else {
+                backgroundColor = UIColor(white: 0.9, alpha: 1)
             }
         }
     }
@@ -53,7 +53,7 @@ class CloseButton: UIButton {
     }
     
     func setupView() {
-        backgroundColor = UIColor(white: 0.85, alpha: 1)
+        backgroundColor = UIColor(white: 0.9, alpha: 1)
         layer.cornerRadius = frame.size.width / 2
         layer.masksToBounds = true
     }

@@ -45,15 +45,18 @@ class NumberedPinView: UIView {
     override func draw(_ rect: CGRect) {
 //        print("draw rect")
         super.draw(rect)
+        
+        let context = UIGraphicsGetCurrentContext()
+        
         let path = UIBezierPath()
         let w = rect.size.width
         let h = rect.size.height
         let pad: CGFloat = 2
-        let rad = (w / 2) - 2 * pad
+        let rad = (w / 2) - (2 * pad)
         
         let topMiddle = CGPoint(x: w / 2, y: pad)
         let right = CGPoint(x: w - pad, y: pad + rad)
-        let bottomMiddle = CGPoint(x: w / 2, y: h - 4)
+        let bottomMiddle = CGPoint(x: w / 2, y: h - 1)
         let left = CGPoint(x: pad, y: pad + rad)
         
         path.move(to: left)
@@ -77,11 +80,12 @@ class NumberedPinView: UIView {
                       controlPoint1: left + (0, -rad * 0.5),
                       controlPoint2: topMiddle + (-rad * 0.5, 0))
         
-
+        context?.setShadow(offset: .zero, blur: 2)
+        
         path.close()
         UIColor.systemBlue.setFill()
         path.fill()
-        
+                
         UIColor.white.setFill()
         let border: CGFloat = 4
         let circleRect = CGRect(x: pad + border, y: pad + border, width: w - 2 * (pad + border), height: w - 2 * (pad + border))

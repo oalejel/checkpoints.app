@@ -381,9 +381,9 @@ class PathFinder {
     // Note: in this case, the start destination must also be the end destination (for now)
     //      the TSP is optimized in such a way that does not consider paths returning back to
     //      the start location (destinations[0]). This should be optimal.
-    func computeClusteredOptimalPath(numTravelers: Int, completion: @escaping (([[MKMapItem]]) -> Void)) {
-        assert(numTravelers > destinationCollection.count)
-        computeIndividualOptimalPath { (path) in
+    func computeClusteredOptimalPath(numTravelers: Int, completion: @escaping (([[Int]]) -> Void)) {
+        assert(numTravelers < destinationCollection.count)
+        computeIndividualOptimalPath { path in
             
             /*
              option 1: intersperse go-to and return-to-home edges along first k vertices
@@ -420,24 +420,26 @@ class PathFinder {
             
             // we expect distance traveled between points to be about the same, so remove points returning to home to compute avg
             assert(self.bestPath[0] == 0)
-            assert(self.bestPath.last! == 0)
+            assert(self.bestPath.last! != 0)
+            var loopPath = self.bestPath
+            loopPath.append(0)
+            
+            // equal to length of path not include connections to start
             let avgDistGoal =
                 (self.bestPathDistance
-                    - (self.destinationCollection.getDistance(between: self.bestPath[0], and: self.bestPath[1]) +
-                        self.destinationCollection.getDistance(between: self.bestPath[self.bestPath.count - 2], and: self.bestPath.last!)))
+                    - (self.destinationCollection.getDistance(between: loopPath[0], and: loopPath[1]) +
+                        self.destinationCollection.getDistance(between: loopPath[loopPath.count - 2], and: loopPath.last!)))
                 / Double(numTravelers)
             
             var pathSlices = [(Int, Int)]()
             var distanceAccumulator = 0.0
             var sliceStartIndexIndex = 1 // NOTE: this is an index into bestPath. Start at 1 to generalize skipping destinations[0]
-            // WARNING: assuming bestPath[0] == destinations[0] and that bestPath.last == 0
+            // WARNING: assuming loopPath[0] == destinations[0] and that bestPath.last == 0
             
-            for i in 1..<self.bestPath.count-1 { // excludes connect from start to 2nd vertex and penultimate back to start
+            for i in 1..<loopPath.count-1 { // excludes connect from start to 2nd vertex and penultimate back to start
                 let v1IndexIndex = i
                 let v2IndexIndex = i + 1 // should never equal .count or .count - 1
-                distanceAccumulator += self.destinationCollection.getDistance(between: self.bestPath[v1IndexIndex], and: self.bestPath[v2IndexIndex])
-//                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v1 to start location
-//                                     + distance(a: bestPath[v1IndexIndex], b: 0) // v2 to start location
+                distanceAccumulator += self.destinationCollection.getDistance(between: loopPath[v1IndexIndex], and: loopPath[v2IndexIndex])
                 
                 // WARNING: once we form a slice, we want to make sure that others dont have the "sum weight" threshold
                 // preventing division of remaining nodes over multiple ppl. edge case is that a huge number is lifted off of the backs of remaining travelers once the first slice of one location is taken out (a single outlier), and all other points are relatively close to each other,
@@ -445,21 +447,21 @@ class PathFinder {
                 // if we surpass the avg expected distance, assign slice to the next traveler
                 // this "comparison" must involve the consideration of connecting
                 if distanceAccumulator > avgDistGoal {
-                    pathSlices.append((sliceStartIndexIndex, i))
+                    pathSlices.append((sliceStartIndexIndex, i + 1))
                     sliceStartIndexIndex = i + 1
                 }
             }
             
-            if sliceStartIndexIndex != self.bestPath.count - 1 { // close off the last slice if we havent split up to count - 2
-                pathSlices.append((sliceStartIndexIndex, self.bestPath.count - 2)) // careful to account for going back to 0
+            if sliceStartIndexIndex != loopPath.count - 1 { // close off the last slice if we havent split up to count - 2
+                pathSlices.append((sliceStartIndexIndex, loopPath.count - 2)) // careful to account for going back to 0
             }
             
             // step 1: generate path
             // index-index pairs -> subpath index subarray slices -> arrays of mapItem arrays without RTH
-            let subpathSlices = pathSlices.map { self.bestPath[$0.0..<$0.1] }
+            let subpathSlices = pathSlices.map { loopPath[$0.0..<$0.1] }
             
             // step 2: attempt to split path by cutting most distance points
-            let sortedIndices = self.bestPath[1..<self.bestPath.count-1].sorted { (a, b) -> Bool in
+            let sortedIndices = loopPath[1..<loopPath.count-1].sorted { (a, b) -> Bool in
                 // descending by distance from start
                 return self.destinationCollection.getDistance(between: 0, and: a) > self.destinationCollection.getDistance(between: 0, and: b)
             }
@@ -468,38 +470,38 @@ class PathFinder {
             
             // step 2.2: find places to split to generate alternative path
             var alternativeSubpathSlices = [[Int]]()
-            for i in 1..<self.bestPath.count - 2 {
-                if verticesCutSet.contains(self.bestPath[i]) { // if a very distant node, decide to either attach to next node or previous node
-                    if let prevNodeIndex = alternativeSubpathSlices.last?.last, i + 1 <= self.bestPath.count - 2 {
+            for i in 1..<loopPath.count - 1 {
+                if verticesCutSet.contains(loopPath[i]) { // if a very distant node, decide to either attach to next node or previous node
+                    if let prevNodeIndex = alternativeSubpathSlices.last?.last, i + 1 <= loopPath.count - 2 {
                         // case where we have a previous and next node
-                        let nextNodeIndex = self.bestPath[i+1]
-                        if self.destinationCollection.getDistance(between: prevNodeIndex, and: self.bestPath[i]) < self.destinationCollection.getDistance(between: self.bestPath[i], and: nextNodeIndex) {
+                        let nextNodeIndex = loopPath[i+1]
+                        if self.destinationCollection.getDistance(between: prevNodeIndex, and: loopPath[i]) < self.destinationCollection.getDistance(between: loopPath[i], and: nextNodeIndex) {
                             // better to connect to previous node and form a new sequence
-                            alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(self.bestPath[i])
+                            alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(loopPath[i])
                             alternativeSubpathSlices.append([]) // then append empty array for next node to be added to
                         } else {
                             // better to connect to next node in a new sequence
-                            alternativeSubpathSlices.append([self.bestPath[i]])
+                            alternativeSubpathSlices.append([loopPath[i]])
                         }
                     } else if let _ = alternativeSubpathSlices.last?.last {
                         // case where we only have a previous node
                         // this means that this is the last node, and should be the only one visited by the last traveler
-                        alternativeSubpathSlices.append([self.bestPath[i]])
-                    } else if i + 1 <= self.bestPath.count - 2 {
+                        alternativeSubpathSlices.append([loopPath[i]])
+                    } else if i + 1 <= loopPath.count - 2 {
                         // case where we have a next node and not a previous node
                         // hmmmmmmm maybe just isolate it from the rest?
                         // TODO: consider changing this behavior
-                        alternativeSubpathSlices.append([self.bestPath[i]])
+                        alternativeSubpathSlices.append([loopPath[i]])
                         alternativeSubpathSlices.append([])
                     } else {
                         // case where we dont have a previous or next node. Simply append
-                        alternativeSubpathSlices.append([self.bestPath[i]])
+                        alternativeSubpathSlices.append([loopPath[i]])
                     }
                 } else {
                     if alternativeSubpathSlices.isEmpty {
-                        alternativeSubpathSlices.append([self.bestPath[i]])
+                        alternativeSubpathSlices.append([loopPath[i]])
                     } else {
-                        alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(self.bestPath[i])
+                        alternativeSubpathSlices[alternativeSubpathSlices.count - 1].append(loopPath[i])
                     }
                 }
             }
@@ -508,9 +510,9 @@ class PathFinder {
             print(alternativeSubpathSlices)
             assert(alternativeSubpathSlices.count == numTravelers)
             assert(pathSlices.count == numTravelers)
-            assert(subpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count,
-                   "incorrect destination count in pathSlices")
-            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count,
+            assert(subpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count - 1,
+                   "incorrect destination count in pathSlices") // - 1 to account for 1 checkpoint being the start
+            assert(alternativeSubpathSlices.reduce(0) { $0 + $1.count } == self.destinationCollection.count - 1,
                    "incorrect destination count in alternativeSubpathSlices")
 
                         
@@ -536,16 +538,19 @@ class PathFinder {
                 return sum
             }.reduce(0.0) { $0 + $1 }
             
-            var subpathsOutput = [[MKMapItem]]() // should not include connections back to start (0 - ... - 0)
+//            var subpathsOutput = [[MKMapItem]]() // should not include connections back to start (0 - ... - 0)
+            var subpathIndicesOutput = [[Int]]()
             // if better to take our heuristic-generated split, use it
             if alternativeReconnectedSubpathLength < reconnectedSubpathLength {
-                subpathsOutput = alternativeSubpathSlices.map { $0.map { self.destinationCollection[$0] } }
+//                subpathsOutput = alternativeSubpathSlices.map { $0.map { self.destinationCollection[$0] } }
+                subpathIndicesOutput = alternativeSubpathSlices
             } else {
-                subpathsOutput = subpathSlices.map { $0.map { self.destinationCollection[$0] } }
+                subpathIndicesOutput = subpathSlices.map { Array($0) }
+//                subpathsOutput = subpathSlices.map { $0.map { self.destinationCollection[$0] } }
             }
             
             // call completion handler with our mapitem subpaths
-            completion(subpathsOutput)
+            completion(subpathIndicesOutput)
         }
     }
     
