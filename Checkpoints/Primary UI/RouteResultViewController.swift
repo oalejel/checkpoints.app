@@ -9,9 +9,6 @@
 import UIKit
 
 class RouteResultViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, StatefulViewController {
-    
-    
-
     @IBOutlet weak var startDirectionsButton: UIButton!
     @IBOutlet weak var closeButton: CloseButton!
     
@@ -98,7 +95,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
                 
                 self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
 
-                let remainingMeters = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: 0)
+                let remainingMeters = self.distanceAfterCheckpoint(startIndex: 0)
                 self.setDistanceLabel(meters: remainingMeters)
                 
                 self.tableView.reloadData()
@@ -108,6 +105,17 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
                 NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
             }
         }
+    }
+    
+    func distanceAfterCheckpoint(startIndex: Int) -> Double {
+        guard let route = optimalRouteArray else {
+            fatalError("Attempting to compute on nil optimalArray")
+        }
+        var dist = 0.0
+        for i in startIndex..<(route.count - 1) {
+            dist += PathFinder.shared.destinationCollection.getDistance(between: route[i], and: route[i + 1])
+        }
+        return dist
     }
     
     var viewWillAppearedCalled = false
@@ -220,7 +228,7 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
                     self.stopsRemainingLabel.text! += " stops remaining"
                 }
                 
-                let distanceRemaining = PathFinder.shared.destinationCollection.distanceAfterCheckpoint(startIndex: indexPath.row - 1)
+                let distanceRemaining = self.distanceAfterCheckpoint(startIndex: indexPath.row - 1)
                 self.setDistanceLabel(meters: distanceRemaining)
 
             }, completion: nil)
