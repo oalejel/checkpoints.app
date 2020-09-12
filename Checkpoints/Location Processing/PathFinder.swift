@@ -72,7 +72,7 @@ class PathFinder {
             MapActivityStatus.toggleBusy(true)
             self.incompleteJobCount += 1
             let childEdgeCount = self.destinationCollection.count
-            self.taskProgressDenominator += childEdgeCount
+            self.taskProgressDenominator = 1 //TODO: CHANGE += childEdgeCount
             
             #warning("though appended, we are not guaranteed that distances will be ready at this point")
             self.destinationCollection.append(mapItem)
@@ -107,8 +107,8 @@ class PathFinder {
                     self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: straightDistance)
                 } else {
                     let request = MKDirections.Request()
-                    request.source = mapItem
-                    request.destination = self.destinationCollection[colIndex]
+                    request.source = self.destinationCollection[colIndex]
+                    request.destination = mapItem
                     request.requestsAlternateRoutes = false
                     request.transportType = .automobile
                     let directions = MKDirections(request: request)
@@ -142,6 +142,7 @@ class PathFinder {
                         }
                         
                         _increment_progress()
+//                        print("\(self.destinationCollection[colIndex]) -> \(mapItem) = \(etaResponse.distance)")
                         self.destinationCollection.setDistance(between: rowIndex, and: colIndex, distance: etaResponse.distance)
                         etaSemaphore.signal() // indicate that we can move on to next iteration
                     }
@@ -187,7 +188,7 @@ class PathFinder {
             self.destinationRequestSemaphore.wait()
             while self.incompleteJobCount != 0 {
                 // release to allow access to these semaphores
-                print("waiting")
+//                print("waiting")
                 self.destinationRequestSemaphore.signal()
                 self.destinationRequestSemaphore.wait()
             }
@@ -211,7 +212,7 @@ class PathFinder {
             
             print("starting with path upper bound of weight: ", bestPathDistance)
             // start with best one so far to help search time
-            (bestPath, bestPathDistance) = self.generatePermutations(startPath: bestPath, upperBoundEstimate: bestPathDistance)
+            (bestPath, bestPathDistance) = self.computeBestSubpathPermutation(startPath: bestPath, upperBoundEstimate: bestPathDistance)
             
             // do some shifting
             bestPath.append(bestPath.first!)
@@ -226,64 +227,103 @@ class PathFinder {
     // Note: in this case, the start destination must also be the end destination (for now)
     //      the TSP is optimized in such a way that does not consider paths returning back to
     //      the start location (destinations[0]). This should be optimal.
-    func computeClusteredOptimalPath(numTravelers: Int, completion: @escaping (([[Int]]) -> Void)) {
+    func computeGroupOptimalPath(numTravelers: Int, completion: @escaping (([[Int]]) -> Void)) {
         assert(numTravelers < destinationCollection.count)
+
+        var bestComboSplitIndices = [[Int]]()
+//        var bestComboSD = Double.infinity
+        var bestComboScore = Double.infinity
+        var bestInfo = [([Int], Double)]()
+        // TODO: estimating how many branches we want to track
+        self.taskProgressNumerator = 0
+        self.taskProgressDenominator = Int.max
+        self.permCheckDepth = Int.max
+//        (self.taskProgressDenominator, self.permCheckDepth) = self.cutoffFactorial(n: self.destinationCollection.count)
         
-        var subpathIndicesOutput = [[Int]]()
-        func computeLength(headlessPath: Int) -> Double {
-            return 0.0
-        }
-        
-        var comboSplitIndices = Array(0..<numTravelers)
+        var comboIndices = Array(repeating: [Int](), count: numTravelers)
+        var stars = Set(1..<destinationCollection.count)
         func generateCombinations(start: Int, end: Int, index: Int) {
             if index == numTravelers {
-                //                print(comboSplitIndices)
-                // plug each part of comboIndices into a distance computation
-                var driverGroupings = [[Int]]()
-                for i in 0..<numTravelers {
+        //        print(comboIndices)
+                // end recursive call - test possible splits among each bar
+        //        print("extras: \(stars)")
+                var starray = Array(stars)
+                
+                func addRest() {
+                    if starray.isEmpty {
+                        
+//                        if comboIndices[1] == [5] {
+//                            print("here")
+//                        }
+                        // completed combination
+                        // calculate optimal TSP for each of the driver groupings
+                        let optimalSubpathInfo = comboIndices.map { testPath in
+                            // generate permutation -- test path does not include index 0 (aka always the start location)
+                            return computeBestSubpathPermutation(startPath: [0] + testPath)
+                        }
+                        
+                        // do a statistical analysis on the distances calculated for this route
+                        // we want to make sure that everyone drives about the same distance
+                        
+                        let meanDistance = optimalSubpathInfo.reduce(0.0) { return $0 + $1.1 } / Double(numTravelers)
+                        // standard deviation as score
+                        let score = sqrt((1 / Double(numTravelers)) * optimalSubpathInfo.reduce(0.0) { $0 + pow($1.1 - meanDistance, 2) })
+                        
+                        let optimalSubpaths = optimalSubpathInfo.map { $0.0 }
+                        print("Testing ", comboIndices, " - best permutations: ", optimalSubpaths)
+                        
+//                        let sumOfSquares = optimalSubpathInfo.reduce(0.0) {
+//                            $0 + pow($1.1, 2)
+//                        }
+//                        let score = sqrt(sumOfSquares) // l2norm
+                        print("COMPARE: \n\t \(optimalSubpathInfo) \n\t vs \(bestInfo) \n\t (new score = \(score), old score = \(bestComboScore)")
+                        
+                        if bestComboScore > score {
+                            print("\t✅ BETTER SCORE")
+                            bestComboScore = score
+                            bestComboSplitIndices = optimalSubpaths
+                            bestInfo = optimalSubpathInfo // REMOVE THIS AFER DONE DEBUGGING
+                        } else {
+                            print("\t🆇 WORSE SCORE")
+                        }
+                        return
+                    }
                     
-                    let endIndex = i + 1 < numTravelers ? comboSplitIndices[i + 1] : self.destinationCollection.count
-                    let range = Array(comboSplitIndices[i]..<endIndex)
-                    //                    print(arr)
-                    driverGroupings.append(range)
+                    // generate all possible ways to append a number to each of the sublists
+                    for t in 0..<numTravelers {
+                        // try appending to first, then recursive call attempt to add to next
+                        comboIndices[t].append(starray.last!)
+                        starray.removeLast() // OPTIMIZE BY KEEPING AN INDEX TRACKING WHERE WE ARE REMOVING FROM IN DEEPER CALLS
+                        addRest()
+                        let last = comboIndices[t].last!
+                        comboIndices[t].removeLast()
+                        starray.append(last)
+                    }
                 }
+                addRest()
                 
-                // calculate optimal TSP for each of the driver groupings
-                let distancesForThisCombo = driverGroupings.map { _ in
-                    // generate permutation
-                    
-                    // calculate length
-                    // return length
-                    
-                }
-                
-                // do a statistical analysis on the distances calculated for this route
-                // we want to make sure that everyone drives about the same distance
-                
-                // end recursive call
                 return
             }
             
             var i = start
             while i <= end && (end - i + 1) >= (numTravelers - index) {
-                comboSplitIndices[index] = i
+                comboIndices[index].append(i)
+                stars.remove(i)
                 generateCombinations(start: i + 1, end: end, index: index + 1)
+                stars.insert(i)
+                comboIndices[index].removeFirst()
                 if index == 0 { break } // leave 0 index in place
                 i += 1
             }
-            
         }
+
         
         // kickstart test of every possible way to group points into numTravelers bins
         // start index of 1 so that we do not include start location (index 0) in subpath groupings
         generateCombinations(start: 1, end: self.destinationCollection.count - 1, index: 0)
-        
-        
-        
-        
-        
+        print("DONE: \(bestComboSplitIndices)")
         // call completion handler with our mapitem subpaths
-        //        completion(subpathIndicesOutput)
+        completion(bestComboSplitIndices)
         
     }
     
@@ -346,12 +386,11 @@ class PathFinder {
     
     // warning: may want to add a progress update closure to give updates to the progress of the computation
     var permCheckDepth = 0 // depth at which to increment our branch progress count
-    private func generatePermutations(startPath: [Int], upperBoundEstimate: Double = .infinity) -> ([Int], Double) {
-        var bestPath = [Int]()
+    private func computeBestSubpathPermutation(startPath: [Int], upperBoundEstimate: Double = .infinity) -> ([Int], Double) {
+        var bestPath = startPath
         var bestPathDistance = upperBoundEstimate
-        
         func genPermsRec(permutation: inout [Int], permLength: Int, growingDistance: Double) {
-            print("perm", permutation, " length: ", permLength, " cost: ", growingDistance)
+//            print("perm", permutation, " length: ", permLength, " cost: ", growingDistance)
             if growingDistance > bestPathDistance {
                 print("cutting out this permutation!")
                 return
@@ -367,28 +406,31 @@ class PathFinder {
             }
             
             if permLength == permutation.count {
-                let testDistance = growingDistance + destinationCollection.getDistance(between: 0, and: permutation.last!)
-                print("testing by adding length: ", testDistance)
-                if testDistance < bestPathDistance {
-                    print("better permutation!")
+                let fullCycleDistance = growingDistance + destinationCollection.getDistance(between: 0, and: permutation.last!)
+//                print("testing by adding length: ", testDistance)
+                if fullCycleDistance < bestPathDistance {
+//                    print("better permutation!")
                     bestPath = permutation
-                    bestPathDistance = testDistance
+                    bestPathDistance = fullCycleDistance
                 }
                 return
             }
             
             // TODO: test promising, though time isnt an issue for a couple destinations
-            if !promising(&permutation, permLength, growingDistance) {
+            if !promising(&permutation, permLength, growingDistance, bestPathDistance) {
                 return
             }
             
             for i in permLength..<permutation.count {
                 permutation.swapAt(permLength, i)
-                let nextEdge = destinationCollection.getDistance(between: permLength - 1, and: permLength)
+                let nextEdge = destinationCollection.getDistance(between: permutation[permLength - 1], and: permutation[permLength])
                 genPermsRec(permutation: &permutation, permLength: permLength + 1, growingDistance: growingDistance + nextEdge)
                 permutation.swapAt(permLength, i)
             }
         }
+        var startPerm = startPath
+        genPermsRec(permutation: &startPerm, permLength: 1, growingDistance: 0)
+        return (bestPath, bestPathDistance)
     }
     
     private func computePathUpperBound() -> ([Int], Double) {
@@ -427,21 +469,21 @@ class PathFinder {
         // repeatedly add arbitrary vertex k while minimizing C_ik + C_kj - C_ij
         // i can start from index 0, and only consider a vertex if its not the
         // arbitrary start, or the minstartindex
-        for k in 0..<destinationCollection.count {
-            if k == arbitraryStartIndex || k == minStartPairIndex { continue }
+        for raw_test_index in 0..<destinationCollection.count {
+            if raw_test_index == arbitraryStartIndex || raw_test_index == minStartPairIndex { continue }
             
             // find an adj pair of indices in our partialPath vertex that minimizes the above cost function
             var bestSpliceWeight = Double.infinity
-            var leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: k)
+            var leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: raw_test_index)
             var rightWeight: Double = 0
             var leftIndex = 0
             
             for partialIndex in 0..<(partialPath.count - 1) {
-                if partialIndex == k { continue}
+                if partialIndex == raw_test_index { continue}
                 
                 let originalCost = destinationCollection.getDistance(between: partialPath[partialIndex], and: partialPath[partialIndex + 1])
                 // no need to update left and right repetitively
-                rightWeight = destinationCollection.getDistance(between: partialPath[partialIndex + 1], and: k)
+                rightWeight = destinationCollection.getDistance(between: partialPath[partialIndex + 1], and: raw_test_index)
                 
                 // now consider the new potential cost of inserting between
                 // partialPath[partialIndex] and partialPath[partialIndex + 1]
@@ -455,14 +497,14 @@ class PathFinder {
                 leftWeight = rightWeight
             }
             
-            leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: k)
-            rightWeight = destinationCollection.getDistance(between: partialPath.last!, and: k)
+            leftWeight = destinationCollection.getDistance(between: partialPath.first!, and: raw_test_index)
+            rightWeight = destinationCollection.getDistance(between: partialPath.last!, and: raw_test_index)
             // consider attaching to tip
             let endConnectionLength = destinationCollection.getDistance(between: partialPath.first!, and: partialPath.last!)
             if leftWeight + rightWeight - endConnectionLength < bestSpliceWeight {
-                partialPath.append(k)
+                partialPath.append(raw_test_index)
             } else { // otherwise, attach to an intermediate index
-                partialPath.insert(k, at: leftIndex + 1)
+                partialPath.insert(raw_test_index, at: leftIndex + 1)
             }
         }
         
@@ -538,7 +580,7 @@ class PathFinder {
     }
     
     // tell whether adding the count - permLength nodes can possibly produce an optimal path
-    private func promising(_ permutation: inout [Int], _ permLength: Int, _ pathDistance: Double) -> Bool {
+    private func promising(_ permutation: inout [Int], _ permLength: Int, _ pathDistance: Double, _ bestPathDistance: Double) -> Bool {
         // compute MST on remaining vertices
         //        if permLength >= permutation.count - 3 { return true }// TODO: make this bound larger to avoid wasting time on MST when we just have a few points
         
@@ -604,7 +646,7 @@ class PathFinder {
             }
         }
         
-        print(permLength, " mst total weight = ", minLeftEdge + minRightEdge + mstWeight + pathDistance, "path part: ", pathDistance)
+//        print(permLength, " mst total weight = ", minLeftEdge + minRightEdge + mstWeight + pathDistance, "path part: ", pathDistance)
         return minLeftEdge + minRightEdge + mstWeight + pathDistance < bestPathDistance
     }
     

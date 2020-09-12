@@ -358,7 +358,7 @@ class MapsViewController: UIViewController, CLLocationManagerDelegate, MKMapView
                 annotationView = pinView
             }
         case .Numbered(let num):
-            print("pin num: \(num), place: \(annotation.title)")
+//            print("pin num: \(num), place: \(annotation.title)")
             if annotationView == nil {
                 let numberedView = NumberedAnnotationView(annotation: annotation, reuseIdentifier: reuseID)
                 annotationView = numberedView

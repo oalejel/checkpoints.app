@@ -221,15 +221,17 @@ extension MainViewController: LocationsDelegate {
     
     func addCheckpointToPath(mapItem: MKMapItem, focus: Bool) {
         PathFinder.shared.addDestination(mapItem: mapItem)
-        if PathFinder.shared.destinationCollection.count == 0 {
-            PathFinder.shared.startLocationItem = mapItem // set to first location as default
+        PathFinder.shared.notifyOnRequestCompletion { // wait for add to complete 
+            if PathFinder.shared.destinationCollection.count == 1 {
+                PathFinder.shared.startLocationItem = mapItem // set to first location as default
+            }
+            
+            self.mapsViewController.savePin(for: mapItem, focus: focus)
+            self.overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
+            self.searchViewController.clearEditing(refreshAddedCheckpoints: true)
+            
+            self.refreshCheckpointsButton()
         }
-        
-        mapsViewController.savePin(for: mapItem, focus: focus)
-        overlayController.moveOverlay(toNotchAt: OverlayNotch.minimum.rawValue, animated: true)
-        searchViewController.clearEditing(refreshAddedCheckpoints: true)
-        
-        refreshCheckpointsButton()
     }
     
     func removeCheckpointFromPath(mapItem: MKMapItem) {
@@ -347,6 +349,9 @@ extension MainViewController: RouteConfigDelegate {
             ann.coordinate = item.placemark.coordinate
             generatedAnnotations.append(ann)
         }
+        
+        // TODO: for all annotations not in the path indices, display another kind of annotation
+        
         
 //        let polyline = MKPolyline(coordinates: coords, count: coords.count)
 //        let line = AnimatedPolyline(coordinates: coords, count: coords.count)

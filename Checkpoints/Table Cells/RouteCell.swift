@@ -26,7 +26,7 @@ class RouteCell: UITableViewCell {
         // specify whether the cell is for a start, completed intermediate, next stage, or incomplete intermediate checkpoint
     }
     
-    private var sequenceType: RouteSequenceType = .Start {
+    private var sequenceType: RouteSequenceType = .Incomplete {
         didSet {
             // location labels
             
@@ -110,11 +110,22 @@ class RouteCell: UITableViewCell {
         }
     }
     
-    func setDistance(index: Int, title: String, distanceInMeters: Double?, sequenceType: RouteSequenceType) {
+    func setDistance(index: Int, title: String, distanceInMeters: Double?, sequenceType: RouteSequenceType, hideSelection: Bool = false) {
         self.distanceInMeters = distanceInMeters
         self.sequenceType = sequenceType
         self.indexButton.setTitle("\(index + 1)", for: .normal) // let's use 1-indexing
         self.locationLabel.text = title
+        
+        if hideSelection {
+            indexButton.backgroundColor = UIColor(white: 0.85, alpha: 1)
+            indexButton.layer.borderWidth = 0
+            indexButton.setTitleColor(.gray, for: .normal)
+
+            topIndexBar.isHidden = true
+            bottomIndexBar.isHidden = true
+            locationLabel.textColor = .black
+            indexButton.backgroundColor = .clear
+        }
     }
     
     override func awakeFromNib() {
@@ -126,7 +137,7 @@ class RouteCell: UITableViewCell {
         distanceButton.layer.cornerRadius = 4
         indexButton.isUserInteractionEnabled = false
         indexButton.titleLabel?.adjustsFontSizeToFitWidth = true
-        
+        sequenceType = .Incomplete // default
         clipsToBounds = true
     }
     

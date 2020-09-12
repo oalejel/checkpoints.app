@@ -81,29 +81,32 @@ class RouteResultViewController: UIViewController, UITableViewDataSource, UITabl
         tableView.separatorStyle = .none
         
         // ---- start computation with handler
-        PathFinder.shared.computeIndividualOptimalPath { routeArray in
-//            print("GOT OUTPUT:", routeArray)
-            DispatchQueue.main.async {
-                self.finishedComputation = true
-                self.optimalRouteArray = routeArray
-                self.delegate.showNumberedAnnotations(pathIndices: routeArray)
-                
-                // if view already appeared, we must show primary UI here
-                if self.viewWillAppearedCalled {
-                    self.togglePrimaryUIVisibility(hidden: false, animated: self.viewDidAppearCalled)
-                }
-                
-                self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
+        PathFinder.shared.notifyOnRequestCompletion {
+            PathFinder.shared.computeIndividualOptimalPath { routeArray in
+    //            print("GOT OUTPUT:", routeArray)
+                DispatchQueue.main.async {
+                    self.finishedComputation = true
+                    self.optimalRouteArray = routeArray
+                    self.delegate.showNumberedAnnotations(pathIndices: routeArray)
+                    
+                    // if view already appeared, we must show primary UI here
+                    if self.viewWillAppearedCalled {
+                        self.togglePrimaryUIVisibility(hidden: false, animated: self.viewDidAppearCalled)
+                    }
+                    
+                    self.stopsRemainingLabel.text = "\(PathFinder.shared.destinationCollection.count - 2) stops remaining" // TODO: assume that 2 of the destinations include start and end?
 
-                let remainingMeters = self.distanceAfterCheckpoint(startIndex: 0)
-                self.setDistanceLabel(meters: remainingMeters)
-                
-                self.tableView.reloadData()
-                //        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
-                self.tableView.selectRow(at: IndexPath(row: self.selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
-                
-                NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+                    let remainingMeters = self.distanceAfterCheckpoint(startIndex: 0)
+                    self.setDistanceLabel(meters: remainingMeters)
+                    
+                    self.tableView.reloadData()
+                    //        tableView.selectRow(at: IndexPath(row: selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
+                    self.tableView.selectRow(at: IndexPath(row: self.selectedStopIndex, section: 0), animated: false, scrollPosition: .none)
+                    
+                    NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+                }
             }
+
         }
     }
     
